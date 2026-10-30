@@ -18,82 +18,88 @@
 | **Phase 1** | Project Initialization, Environment & Foundation | **Completed** | 40 files committed; C# compiled cleanly with 0 errors; Scene hierarchy established |
 | **Phase 2** | Complete Slot Machine Interface & UI Pipeline | **Completed** | Full arcade cabinet, reels, HUD, controls, history drawer, and 5 symbols generated & verified |
 | **Phase 3** | Slot Machine Reel Architecture & Configuration | **Completed** | 3 independent reels, SymbolDatabase, sizing, alignment, prefabs, and test suite passing (5/5) |
-| **Phase 4** | Reel Animation System & Motion Polish | **Next Up** | Ready for approval |
-| **Phase 5** | Core Game Logic (RNG, Evaluator, Payout Engine) | Pending | - |
+| **Phase 4** | Core Gameplay Engine (RNG, Evaluator, Payouts) | **Completed** | RNG generator, winning evaluator, payout manager, 13/13 total tests passing |
+| **Phase 5** | Reel Animation System & Motion Polish | **Next Up** | Ready for approval |
 | **Phase 6** | Audio System & Visual Effects (Particles/Glow) | Pending | - |
 | **Phase 7** | Bonus Features (Auto-spin, Win Streak, History) | Pending | - |
-| **Phase 8** | Unit & Integration Testing Suite | Pending | - |
-| **Phase 9** | WebGL Build Pipeline & Verification | Pending | - |
-| **Phase 10**| Git Commit Log & Production Documentation | Pending | - |
+| **Phase 8** | Integration & End-to-End Testing | Pending | - |
+| **Phase 9** | WebGL Build Pipeline & Local Server Delivery | Pending | - |
+| **Phase 10**| Git History, README & Production Documentation | Pending | - |
 
 ---
 
-### Phase 3 Execution Summary
+### Phase 4 Execution Summary
 
-#### 1. Three Independent Reels Implemented
-* **Reel Controllers**:
-  * `Reel_Left` (Reel Index 0)
-  * `Reel_Center` (Reel Index 1)
-  * `Reel_Right` (Reel Index 2)
-* Each reel operates with complete independence:
-  * Separate state tracking (`isSpinning`, `currentPaylineSymbol`).
-  * Independent events (`OnReelSpinStarted`, `OnReelStopped`).
-  * Independent symbol slots, allowing one reel to spin while others are stationary.
-
-#### 2. Reusable ReelController & Symbol Hierarchy
-* [`ReelController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Reels/ReelController.cs):
-  * Manages an array of `SymbolItemView` slots (5 slots: TopBuffer, Top, Center Payline, Bottom, BottomBuffer).
-  * Encapsulates layout positioning, vertical pitch ($150\text{px}$), and icon sizing ($150 \times 150\text{px}$).
-  * Supports dynamic symbol replacement on individual slots (`ReplaceSymbol(int slotIndex, SymbolData newSymbol)`).
-  * Exposes explicit methods to set the 3 visible symbols (`SetVisibleSymbols()`) or single center payline target (`SetCenterPaylineSymbol()`).
-  * Enforces payline highlighting (`SetPaylineHighlight(bool)`).
-* [`SymbolItemView.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Reels/SymbolItemView.cs):
-  * Reusable slot component holding icon image, background plate, and golden highlight border.
-  * Preserves aspect ratio with crisp centering.
-
-#### 3. Symbol Data Configuration & Asset Database
-* [`SymbolDatabase.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Data/SymbolDatabase.cs):
-  * Central ScriptableObject holding all game symbols.
-  * Asset created at `Assets/Art/Symbols/DefaultSymbolDatabase.asset`.
-  * Wires all 5 production symbols:
-    * 🍒 **Cherry** (`CherryData.asset` - 2x payout, weight 35)
-    * 🔔 **Bell** (`BellData.asset` - 5x payout, weight 25)
-    * 🍫 **Double BAR** (`BarData.asset` - 10x payout, weight 20)
-    * 7️⃣ **Lucky 7** (`SevenData.asset` - 25x payout, weight 15)
-    * 💎 **Diamond** (`DiamondData.asset` - 100x payout, weight 5)
-
-#### 4. Alignment, Sizing & Decoupling
-* **Sizing**: Symbols are normalized to $150 \times 150\text{px}$ within a $250\text{px}$ wide reel aperture.
-* **Alignment**:
-  * Top Row: $y = +150\text{px}$
-  * Center Payline: $y = 0\text{px}$
-  * Bottom Row: $y = -150\text{px}$
-* **Presentation Decoupling**: `ReelController` never calculates or alters game outcomes. It only presents predetermined `SymbolData` instances provided by `SlotMachineController` or caller code.
-
-#### 5. Reusable Prefabs Created
-* [`SymbolItem.prefab`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Prefabs/Reels/SymbolItem.prefab): Modular UI slot with `SymbolItemView`, icon, border, and plate.
-* [`Reel.prefab`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Prefabs/Reels/Reel.prefab): Complete reel unit with `ReelController`, aperture mask, and symbol container.
-
-#### 6. Unit Testing & Verification Suite
-Executed automated test runner [`ReelArchitectureTests.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Tests/ReelArchitectureTests.cs):
-
-| Test Case | Description | Result |
-|---|---|:---:|
-| `SymbolDatabase_ConfiguredCorrectly` | Verifies all 5 symbols loaded with correct multipliers & weights | **PASS** |
-| `ReelController_SlotSizingAndAlignment` | Verifies vertical pitch ($150\text{px}$), center $y=0$, top $y=+150$, bottom $y=-150$ | **PASS** |
-| `Reels_OperateIndependently` | Verifies spinning one reel leaves others unaffected | **PASS** |
-| `SymbolReplacement_UpdatesTargetSlotOnly` | Verifies replacing a slot does not corrupt neighboring slots | **PASS** |
-| `PresentationSeparatedFromOutcomeGeneration` | Verifies reel only reflects external predetermined outcome | **PASS** |
-
-**Test Execution Summary: 5 Run, 5 Passed, 0 Failed (100% Pass Rate).**
-
-* **Git Commit**: `c60c6e7: feat(reels): Implement independent reel architecture, symbol configuration, sizing, alignment, and test suite`.
+#### 1. Components Implemented
+* [`RandomOutcomeGenerator.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/RandomOutcomeGenerator.cs):
+  * Generates 3 independent predetermined symbol outcomes before reel animations commence.
+  * Abstracted RNG via `IRandomProvider`:
+    * `UnityRandomProvider`: Standard `UnityEngine.Random` for production runtime randomness.
+    * `SeededRandomProvider`: Deterministic `System.Random` for unit tests and repeatable verification.
+  * Weighted probability distribution based on `SymbolData.Weight` (or uniform).
+  * Prevents hardcoded repeating sequences or predictable symbol cycles.
+* [`WinningEvaluator.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/WinningEvaluator.cs):
+  * Pure gameplay evaluation logic independent of view and animation systems.
+  * Mandatory winning logic: player wins if and only if **all three center payline symbols match**.
+  * Detects all 5 winning scenarios:
+    * 🍒 **Cherry** = 2x
+    * 🔔 **Bell** = 5x
+    * 🍫 **Double BAR** = 10x
+    * 7️⃣ **Lucky 7** = 25x
+    * 💎 **Diamond** = 100x (Jackpot)
+  * Detects all losing combinations:
+    * 2 matching + 1 different (e.g., Bell \| Bell \| Cherry) = Loss (0 payout)
+    * Split match (e.g., Seven \| BAR \| Seven) = Loss (0 payout)
+    * All 3 distinct (e.g., Cherry \| Diamond \| Bell) = Loss (0 payout)
+    * Null or incomplete symbol arrays = Loss (0 payout)
+* [`PayoutManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/PayoutManager.cs):
+  * Economy management: starting balance ($1,000\text{G}$), min bet ($10\text{G}$), max bet ($100\text{G}$), bet step ($10\text{G}$).
+  * Payout Formula: $\text{Payout} = \text{Bet Amount} \times \text{Symbol Multiplier}$.
+  * Validates sufficient credits prior to spinning; fires `OnInsufficientFunds` if balance is insufficient.
+  * Deducts bet on spin; awards and credits balance on win.
+* [`GameManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Core/GameManager.cs):
+  * Full orchestration: validates balance $\to$ deducts bet $\to$ generates predetermined outcome via RNG $\to$ evaluates win/loss $\to$ triggers reel spin $\to$ stops reels at predetermined result $\to$ distributes payout $\to$ updates HUD $\to$ records spin into history.
 
 ---
 
-### Next Phase: Phase 4 (Reel Animation & Motion System)
-Objectives for Phase 4:
-1. Implement physics-like smooth acceleration from rest to terminal speed.
-2. Implement continuous vertical symbol scrolling loop with wrap-around math.
-3. Implement eased deceleration (`EaseOutBack` / mechanical bounce overshoot) stopping precisely on the predetermined payline symbol.
-4. Implement sequential reel stopping with configurable delays between reels (Left -> Center -> Right).
+### Automated Unit Test Results ([GameplayEngineTests.cs](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Tests/GameplayEngineTests.cs))
+
+```
+=================================================
+=== RUNNING ALL SLOT MACHINE UNIT TEST SUITES ===
+=================================================
+
+[1] REEL ARCHITECTURE SUITE:
+[PASS] SymbolDatabase_ConfiguredCorrectly
+[PASS] ReelController_SlotSizingAndAlignment
+[PASS] Reels_OperateIndependently
+[PASS] SymbolReplacement_UpdatesTargetSlotOnly
+[PASS] PresentationSeparatedFromOutcomeGeneration
+Reel Tests: 5 | Passed: 5 | Failed: 0
+
+[2] GAMEPLAY ENGINE & RNG SUITE:
+[PASS] AllFiveWinningCombinations
+[PASS] LosingCombinationsDetectedAccurately
+[PASS] PayoutFormulaMatchesSpecification
+[PASS] PayoutManager_CreditValidationAndDeduction
+[PASS] PayoutManager_BetAdjustmentBounds
+[PASS] RandomOutcomeGenerator_AllSymbolsCanAppear
+[PASS] RandomOutcomeGenerator_NoHardcodedSequences
+[PASS] RNGDecoupledFromVisualAnimation
+Gameplay Tests: 8 | Passed: 8 | Failed: 0
+=================================================
+GRAND TOTAL: 13 Tests | Passed: 13 | Failed: 0 (100% Pass Rate)
+=================================================
+```
+
+* **Git Commit**: `418a895: feat(gameplay): Implement RNG outcome generator, winning evaluator, payout manager, and comprehensive test suite`.
+
+---
+
+### Next Phase: Phase 5 (Reel Animation System & Motion Polish)
+Objectives for Phase 5:
+1. Implement smooth acceleration curve from rest to high-speed reel spin.
+2. Implement seamless vertical wrap-around symbol scrolling.
+3. Implement eased deceleration (`EaseOutBack` / spring-loaded mechanical overshoot) landing on the predetermined outcome.
+4. Implement sequential reel stopping with configurable delays between reels (Left $\to$ Center $\to$ Right).
+5. Add visual spin blur / speed lines feedback.
