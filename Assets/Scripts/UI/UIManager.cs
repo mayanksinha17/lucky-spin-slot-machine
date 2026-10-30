@@ -52,11 +52,19 @@ namespace LuckySpin.SlotMachine.UI
         [SerializeField] private Button paytableOpenButton;
         [SerializeField] private Button paytableCloseButton;
 
+        [Header("Modular Bonus UI")]
+        [SerializeField] private Button autoSpinButton;
+        [SerializeField] private TextMeshProUGUI autoSpinButtonText;
+        [SerializeField] private Button muteToggleButton;
+        [SerializeField] private TextMeshProUGUI muteButtonText;
+
         public event Action OnSpinClicked;
         public event Action OnIncreaseBetClicked;
         public event Action OnDecreaseBetClicked;
         public event Action OnMaxBetClicked;
         public event Action<int> OnQuickBetSelected;
+        public event Action OnAutoSpinClicked;
+        public event Action OnMuteClicked;
 
         private void Awake()
         {
@@ -118,6 +126,36 @@ namespace LuckySpin.SlotMachine.UI
             if (paytableCloseButton != null)
             {
                 paytableCloseButton.onClick.AddListener(ClosePaytable);
+            }
+
+            // Modular Bonus Controls
+            if (autoSpinButton != null)
+            {
+                autoSpinButton.onClick.AddListener(delegate {
+                    if (OnAutoSpinClicked != null) OnAutoSpinClicked();
+                });
+            }
+            if (muteToggleButton != null)
+            {
+                muteToggleButton.onClick.AddListener(delegate {
+                    if (OnMuteClicked != null) OnMuteClicked();
+                });
+            }
+        }
+
+        public void UpdateAutoSpinDisplay(bool isActive, int remainingSpins)
+        {
+            if (autoSpinButtonText != null)
+            {
+                autoSpinButtonText.text = isActive ? string.Format("STOP ({0})", remainingSpins) : "AUTO";
+            }
+        }
+
+        public void UpdateMuteDisplay(bool isMuted)
+        {
+            if (muteButtonText != null)
+            {
+                muteButtonText.text = isMuted ? "MUTED" : "SOUND ON";
             }
         }
 

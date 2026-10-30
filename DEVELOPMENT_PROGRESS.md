@@ -21,63 +21,72 @@
 | **Phase 4** | Core Gameplay Engine (RNG, Evaluator, Payouts) | **Completed** | RNG generator, winning evaluator, payout manager, 13/13 total tests passing |
 | **Phase 5** | Reel Animation System & Motion Polish | **Completed** | Smooth acceleration, EaseOutBack deceleration, sequential stopping, UI punch/rollup/particles, 19/19 tests passing |
 | **Virtual Credit System** | Centralized Virtual Credit, Wallet & Transaction Ledger | **Completed** | Centralized balance ledger, atomic bet deduction, payout calculation, duplicate prevention, audit trail, 35/35 tests passing |
-| **Phase 6** | Audio System & Visual Effects (Particles/Glow) | **Next Up** | Ready for approval |
-| **Phase 7** | Bonus Features (Auto-spin, Win Streak, History) | Pending | - |
-| **Phase 8** | Integration & End-to-End Testing | Pending | - |
+| **Bonus Features System** | Modular Bonus Features (7 Priorities) | **Completed** | Auto-spin, Jackpot animation, Wild symbol, Win streaks, History stats, Audio/Particles polish, 56/56 tests passing |
+| **Phase 8** | Integration & End-to-End Testing Suite | **Next Up** | Ready for approval |
 | **Phase 9** | WebGL Build Pipeline & Local Server Delivery | Pending | - |
 | **Phase 10**| Git History, README & Production Documentation | Pending | - |
 
 ---
 
-### Virtual Credit System Implementation Summary
+### Modular Bonus Features Implementation Summary
 
-#### 1. Centralized Economy & Wallet Architecture ([`PayoutManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/PayoutManager.cs))
-* **Single Source of Truth**: All balance mutations, deductions, and payouts are routed through `PayoutManager`. No component directly modifies credits.
-* **Configurable Balance & Bet Bounds**:
-  * Default Starting Balance: $1,000\text{G}$ (configurable in Inspector).
-  * Minimum Bet: $10\text{G}$.
-  * Maximum Bet: $100\text{G}$.
-  * Bet Step Increment: $10\text{G}$.
-  * Quick Bet Presets: $10\text{G}$, $50\text{G}$, $100\text{G}$.
-* **Transaction Locking & Concurrency Guard**:
-  * Atomically creates a unique transaction ID (`TXN_{Counter}_{Timestamp}`) upon bet deduction.
-  * Rejects duplicate bet deductions while an in-flight transaction is unsettled.
-  * Rejects duplicate payout claims on already-settled transactions.
-  * Supports transaction refund/reversal (`CancelAndRefundActiveTransaction()`) if a spin is aborted.
-* **Payout Calculation Formula**:
-  $$\text{Payout} = \text{Bet Amount} \times \text{Symbol Multiplier}$$
-  * Cherry: $2\times$
-  * Bell: $5\times$
-  * Double BAR: $10\times$
-  * Lucky 7: $25\times$
-  * Diamond: $100\times$ (Jackpot)
-  * Loss: $0\times$ (0 payout)
-* **Auto-Adjustment on Low Balance**:
-  * `AutoAdjustBetToAffordable()`: If the player's balance drops below their selected bet, automatically steps the bet down to the highest affordable step multiple.
-* **Demo Credit Reload**:
-  * `ResetBalance(1000)`: Allows reloading demo credits to prevent game-over deadlocks.
+#### 1. Priority 1: Autonomous Auto-Spin ([`AutoSpinController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Bonus/AutoSpinController.cs))
+* **Credit Validation**: Validates player balance before initiating auto-spin and before each individual spin; halts immediately with `AutoSpinStopReason.InsufficientCredits` if balance falls below current bet.
+* **Concurrency & Overlap Prevention**: Strictly synchronizes with `GameManager.CurrentState`; only executes the subsequent spin when the state machine returns to `Idle`. Prevents overlapping coroutines or concurrent spins.
+* **Configurable Stop Thresholds**:
+  * Configurable spin presets (`10`, `25`, `50`).
+  * `StopOnAnyWin`: Optional toggle to stop on the first winning spin.
+  * `JackpotStopThreshold`: Automatically halts when single payout exceeds configured amount (default: $1,000\text{G}$).
+  * User Cancel: Can be cancelled at any time via HUD.
 
-#### 2. Detailed Notifications & UI Integration ([`UIManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/UI/UIManager.cs))
-* **Balance & Bet Display**: Dynamic HUD formatted with thousand separators (`1,000 G`, `BET 50 G`).
-* **Win Banner**: Celebratory popup modal with `EaseOutBack` pop-in, symbol headline, and rollup numerical credit counter.
-* **Loss Banner**: Clean, non-intrusive notification informing the player of the outcome.
-* **Insufficient Credit Alerts**: Dedicated alert: `"NEED {X} G (HAVE {Y} G) - PLEASE LOWER BET"`.
-* **Coin Particle Shower**: Spawns 25 animated golden coins on every winning spin.
+#### 2. Priority 2: Arcade Jackpot Celebration ([`JackpotCelebrationController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Bonus/JackpotCelebrationController.cs))
+* **Trigger Conditions**: Triggers on 3 Diamonds ($100\times$ payout) or single payout $\ge 1,000\text{G}$.
+* **Celebration Effects**:
+  * Flashing arcade marquee lights cycling between radiant gold and neon purple.
+  * Celebratory modal pop-in with `EaseOutBack` spring overshoot.
+  * Dynamic rollup counter (`JACKPOT: +X G`).
+  * Triggers brass orchestral fanfare and high-intensity coin fountain.
 
-#### 3. Audit Trail & Spin History ([`SpinRecord.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/SpinRecord.cs) & [`GameHistoryManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/GameHistoryManager.cs))
-* Tracks complete financial audit trail per spin:
-  * Spin Number & Timestamp
-  * 3-Symbol Payline Configuration
-  * Bet Placed ($10\text{G} - 100\text{G}$)
-  * Payout Awarded
-  * Net Profit/Loss ($\text{Payout} - \text{Bet}$)
-  * Balance After Spin
-  * Transaction ID
-* Displayed in collapsible, interactive slide-out history drawer.
+#### 3. Priority 3: Modular Wild Symbol ([`WinningEvaluator.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/WinningEvaluator.cs) & [`WildData.asset`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Art/Symbols/WildData.asset))
+* **Wild Substitution**: When `EnableWildSubstitutions` is active:
+  * 1 Wild + 2 Matching Symbols (e.g. `Cherry | Wild | Cherry` $\to$ 3x Cherry win).
+  * 2 Wilds + 1 Symbol (e.g. `Wild | Seven | Wild` $\to$ 3x Seven win).
+  * 3 Wilds: Dedicated $50\times$ Jackpot payout.
+* **Zero Regression**: When disabled, evaluator strictly enforces mandatory 3 identical symbols rule.
+
+#### 4. Priority 4: Dynamic Win Streak Multipliers ([`WinStreakTracker.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Bonus/WinStreakTracker.cs))
+* Tracks consecutive winning spins and awards escalating multiplier boosts:
+  * 1 Win: $1.0\times$ (base)
+  * 2 Consecutive Wins: $1.25\times$ (+25% boost)
+  * 3 Consecutive Wins: $1.50\times$ (+50% boost)
+  * 4+ Consecutive Wins: $2.00\times$ (Double Payout!)
+* Resets to 0 upon any losing spin. Fires streak fanfare chord on streaks $\ge 2$.
+
+#### 5. Priority 5: Performance Statistics & History ([`GameHistoryManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/GameHistoryManager.cs))
+* Dynamically calculates lifetime metrics:
+  * `TotalSpins`, `TotalWins`, `TotalLosses`
+  * `WinRatePercentage` ($(\text{Wins} / \text{Spins}) \times 100$)
+  * `BiggestWin` and corresponding spin index
+* Performance summary: `"SPINS: X | WINS: Y (Z%) | BEST: +W G"`.
+
+#### 6. Priority 6: Audio Effects Polish ([`AudioManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Audio/AudioManager.cs))
+* Synthesized 2 new 16-bit 44.1kHz PCM clips:
+  * `jackpot_fanfare.wav`: Ascending orchestral brass fanfare with sustained chord decay.
+  * `streak_fanfare.wav`: Upbeat multi-tone ascending chime.
+* Features:
+  * Progressive reel stop pitch shift ($1.00 \to 1.06 \to 1.12$).
+  * Global mute toggle (`SetMuted`, `ToggleMute`).
+  * Master volume scaling with boundary clamping.
+
+#### 7. Priority 7: Enhanced Particle Fountains ([`CoinParticleController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Animations/CoinParticleController.cs))
+* Added `PlayJackpotFountain()`:
+  * Spawns 60 golden coins (up from 25).
+  * Enhanced upward velocity ($750 - 1300\text{px/s}$) and wider horizontal dispersion ($\pm 500\text{px/s}$).
+  * Extended lifetime arc ($1.2 - 2.0\text{s}$) with rotational tumble and alpha fadeout.
 
 ---
 
-### Automated Unit & Edge Case Test Suite Results
+### Automated Test Results (All 5 Test Suites)
 
 ```
 =================================================
@@ -130,16 +139,39 @@ Animation Tests: 6 | Passed: 6 | Failed: 0
 [PASS] TransactionRefund_CancelsActiveTransaction
 [PASS] SpinHistory_AuditTrailRecordsAllTransactions
 Credit Tests: 16 | Passed: 16 | Failed: 0
+
+[5] MODULAR BONUS FEATURES SUITE:
+[PASS] AutoSpin_RespectsBalanceValidation_AbortsWhenInsufficient
+[PASS] AutoSpin_StopsAfterConfiguredSpinCount
+[PASS] AutoSpin_CannotStartOverlappingSpins
+[PASS] AutoSpin_HaltsImmediatelyOnUserCancel
+[PASS] AutoSpin_StopOnWin_HaltsOnFirstWin
+[PASS] Jackpot_TriggeredOnDiamondMatch
+[PASS] Jackpot_TriggeredOnHighPayout
+[PASS] Jackpot_NotTriggeredOnStandardLossOrLowWin
+[PASS] Jackpot_Dismiss_CleansUpState
+[PASS] WildSymbol_SubstitutesSingleMatchingPair
+[PASS] WildSymbol_SubstitutesTwoWildsWithSingleSymbol
+[PASS] WildSymbol_TripleWildAwards50x
+[PASS] WildSymbol_DisabledModeRequiresPureMatch
+[PASS] WinStreak_IncrementsOnConsecutiveWins
+[PASS] WinStreak_DynamicMultiplierScale
+[PASS] WinStreak_ResetsToZeroOnLoss
+[PASS] History_TracksWinRateAndPerformanceMetrics
+[PASS] History_ClearResetsAllPerformanceCounters
+[PASS] Audio_MuteToggleMutesAllAudioSources
+[PASS] Audio_VolumeControlsScaleAudioPlayback
+[PASS] Particle_JackpotFountainConfiguredAccurately
+Bonus Tests: 21 | Passed: 21 | Failed: 0
 =================================================
-GRAND TOTAL: 35 Tests | Passed: 35 | Failed: 0 (100% Pass Rate)
+GRAND TOTAL: 56 Tests | Passed: 56 | Failed: 0 (100% Pass Rate)
 =================================================
 ```
 
 ---
 
-### Next Phase: Phase 6 (Audio System & Visual Effects Polish)
-Objectives for Phase 6:
-1. Wire all 5 audio clips (`button_click.wav`, `spin_loop.wav`, `reel_stop.wav`, `win_chime.wav`, `coin_payout.wav`) to gameplay lifecycle events.
-2. Synchronize individual reel stop audio for each staggered reel.
-3. Implement flashing marquee lights and glow effects around the payline aperture.
-4. Add audio mute and volume toggle controls on the cabinet HUD.
+### Next Phase: Phase 8 (Integration & End-to-End Testing)
+Objectives for Phase 8:
+1. Full end-to-end game flow simulation (credit loading $\to$ bet change $\to$ spin $\to$ audio sync $\to$ payout $\to$ streak $\to$ history recording).
+2. Stress test auto-spin under low balance and rapid user inputs.
+3. Verify zero memory leaks or unmanaged coroutine leaks.

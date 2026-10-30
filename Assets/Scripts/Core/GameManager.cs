@@ -5,11 +5,13 @@ using LuckySpin.SlotMachine.Data;
 using LuckySpin.SlotMachine.Gameplay;
 using LuckySpin.SlotMachine.UI;
 using LuckySpin.SlotMachine.Audio;
+using LuckySpin.SlotMachine.Bonus;
 
 namespace LuckySpin.SlotMachine.Core
 {
     /// <summary>
     /// Master coordinator orchestrating gameplay flow, RNG generation, evaluation, payout distribution, and UI/Audio sync.
+    /// Modular Bonus: Integrates Auto-Spin, Jackpot Celebrations, and Win Streak multipliers.
     /// </summary>
     public class GameManager : MonoBehaviour
     {
@@ -24,6 +26,11 @@ namespace LuckySpin.SlotMachine.Core
         [SerializeField] private AudioManager audioManager;
         [SerializeField] private GameHistoryManager historyManager;
 
+        [Header("Modular Bonus Features (Optional)")]
+        [SerializeField] private AutoSpinController autoSpinController;
+        [SerializeField] private JackpotCelebrationController jackpotCelebration;
+        [SerializeField] private WinStreakTracker winStreakTracker;
+
         [Header("Configuration")]
         [SerializeField] private SymbolDatabase symbolDatabase;
 
@@ -35,6 +42,9 @@ namespace LuckySpin.SlotMachine.Core
         public GameState CurrentState { get { return currentState; } }
         public PayoutManager Payouts { get { return payoutManager; } }
         public EvaluationResult LastResult { get { return lastResult; } }
+        public AutoSpinController AutoSpin { get { return autoSpinController; } }
+        public JackpotCelebrationController Jackpot { get { return jackpotCelebration; } }
+        public WinStreakTracker WinStreak { get { return winStreakTracker; } }
 
         public event Action<GameState> OnStateChanged;
 
@@ -119,6 +129,16 @@ namespace LuckySpin.SlotMachine.Core
             if (historyManager != null && uiManager != null && uiManager.HistoryUI != null)
             {
                 historyManager.OnSpinRecorded += uiManager.HistoryUI.AddRecord;
+            }
+
+            if (autoSpinController != null)
+            {
+                autoSpinController.Initialize(this, payoutManager);
+            }
+
+            if (winStreakTracker != null)
+            {
+                winStreakTracker.Initialize(audioManager);
             }
         }
 
@@ -212,6 +232,20 @@ namespace LuckySpin.SlotMachine.Core
                 {
                     uiManager.ShowLossBanner();
                 }
+            }
+
+            // Modular Bonus 1: Update Win Streak Tracker
+            float streakBonus = 1.0f;
+            if (winStreakTracker != null)
+            {
+                streakBonus = winStreakTracker.RecordResult(lastResult.IsWin);
+            }
+
+            // Modular Bonus 2: Check & Trigger Jackpot Animation (Diamond match or high payout)
+            bool isDiamondMatch = lastResult.IsWin && lastResult.WinningType == SymbolType.Diamond;
+            if (jackpotCelebration != null && (isDiamondMatch || payoutAmount >= 1000))
+            {
+                jackpotCelebration.CheckAndTriggerJackpot(payoutAmount, isDiamondMatch);
             }
 
             // Record spin into history

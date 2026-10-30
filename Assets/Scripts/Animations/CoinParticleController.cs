@@ -8,6 +8,7 @@ namespace LuckySpin.SlotMachine.Animations
 {
     /// <summary>
     /// Spawns an animated fountain of golden coin particles in canvas UI space upon winning.
+    /// Modular Bonus: Supports both standard win showers and massive 60-coin Jackpot burst fountains.
     /// </summary>
     public class CoinParticleController : MonoBehaviour
     {
@@ -38,6 +39,7 @@ namespace LuckySpin.SlotMachine.Animations
         private bool isSpawning = false;
 
         public bool IsActive { get { return activeCoins.Count > 0 || isSpawning; } }
+        public int ActiveCoinCount { get { return activeCoins.Count; } }
 
         private void Awake()
         {
@@ -86,25 +88,32 @@ namespace LuckySpin.SlotMachine.Animations
         /// </summary>
         public void PlayCoinFountain(Vector2 origin)
         {
-            StartCoroutine(SpawnFountainRoutine(origin));
+            StartCoroutine(SpawnFountainRoutine(origin, coinCount, 0.03f, 550f, 950f, 320f));
         }
 
-        private IEnumerator SpawnFountainRoutine(Vector2 origin)
+        /// <summary>
+        /// Triggers a mega jackpot coin fountain with increased particle count and velocity arc.
+        /// </summary>
+        public void PlayJackpotFountain(Vector2 origin)
+        {
+            StartCoroutine(SpawnFountainRoutine(origin, 60, 0.02f, 750f, 1300f, 500f));
+        }
+
+        private IEnumerator SpawnFountainRoutine(Vector2 origin, int count, float interval, float minVy, float maxVy, float maxVx)
         {
             isSpawning = true;
             int spawned = 0;
-            float spawnInterval = 0.03f;
 
-            while (spawned < coinCount)
+            while (spawned < count)
             {
-                SpawnSingleCoin(origin);
+                SpawnSingleCoin(origin, minVy, maxVy, maxVx);
                 spawned++;
-                yield return new WaitForSeconds(spawnInterval);
+                yield return new WaitForSeconds(interval);
             }
             isSpawning = false;
         }
 
-        private void SpawnSingleCoin(Vector2 origin)
+        private void SpawnSingleCoin(Vector2 origin, float minVy = 550f, float maxVy = 950f, float maxVx = 320f)
         {
             if (spawnParent == null) return;
 
@@ -128,12 +137,12 @@ namespace LuckySpin.SlotMachine.Animations
             coin.Rect = rt;
             coin.Img = img;
             // Upward fan velocity
-            float vx = UnityEngine.Random.Range(-320f, 320f);
-            float vy = UnityEngine.Random.Range(550f, 950f);
+            float vx = UnityEngine.Random.Range(-maxVx, maxVx);
+            float vy = UnityEngine.Random.Range(minVy, maxVy);
             coin.Velocity = new Vector2(vx, vy);
             coin.AngularSpeed = UnityEngine.Random.Range(-360f, 360f);
             coin.Lifetime = 0f;
-            coin.MaxLifetime = UnityEngine.Random.Range(1.2f, 1.8f);
+            coin.MaxLifetime = UnityEngine.Random.Range(1.2f, 2.0f);
 
             activeCoins.Add(coin);
         }

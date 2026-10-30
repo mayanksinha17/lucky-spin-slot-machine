@@ -9,7 +9,8 @@ namespace LuckySpin.SlotMachine.Data
         Bell = 1,
         Bar = 2,
         Seven = 3,
-        Diamond = 4
+        Diamond = 4,
+        Wild = 5
     }
 }
 
