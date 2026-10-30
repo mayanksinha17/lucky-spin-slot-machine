@@ -31,3 +31,4 @@ namespace LuckySpin.SlotMachine.Core
         InsufficientFunds = 4
     }
 }
+

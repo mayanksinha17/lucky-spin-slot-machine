@@ -12,3 +12,4 @@ namespace LuckySpin.SlotMachine.Data
         Diamond = 4
     }
 }
+

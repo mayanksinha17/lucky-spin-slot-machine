@@ -3,19 +3,20 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using LuckySpin.SlotMachine.Core;
 
 namespace LuckySpin.SlotMachine.UI
 {
     /// <summary>
-    /// Controls UI elements including HUD balance, bet selector, spin button states, and modal dialogs.
+    /// Master UI manager controlling HUD balance, bet deck, spin button, result banners, status indicator, and history panel.
     /// </summary>
     public class UIManager : MonoBehaviour
     {
-        [Header("HUD Text Displays")]
+        [Header("HUD Displays")]
         [SerializeField] private TextMeshProUGUI balanceText;
         [SerializeField] private TextMeshProUGUI betText;
-        [SerializeField] private TextMeshProUGUI winAmountText;
-        [SerializeField] private TextMeshProUGUI messageBannerText;
+        [SerializeField] private TextMeshProUGUI gameTitleText;
+        [SerializeField] private TextMeshProUGUI statusIndicatorText;
 
         [Header("Primary Action Buttons")]
         [SerializeField] private Button spinButton;
@@ -23,21 +24,41 @@ namespace LuckySpin.SlotMachine.UI
         [SerializeField] private Button decreaseBetButton;
         [SerializeField] private Button maxBetButton;
 
-        [Header("Modals & Overlays")]
+        [Header("Quick Bet Preset Buttons")]
+        [SerializeField] private Button bet10Button;
+        [SerializeField] private Button bet50Button;
+        [SerializeField] private Button bet100Button;
+
+        [Header("Result Notification Area")]
+        [SerializeField] private GameObject resultBannerRoot;
+        [SerializeField] private TextMeshProUGUI resultTitleText;
+        [SerializeField] private TextMeshProUGUI resultPayoutText;
+        [SerializeField] private Image resultBannerBg;
+
+        [Header("Spin History Section")]
+        [SerializeField] private SpinHistoryUI spinHistoryUI;
+        [SerializeField] private Button historyToggleButton;
+
+        [Header("Paytable Modal")]
         [SerializeField] private GameObject paytableModal;
-        [SerializeField] private GameObject winNotificationBanner;
+        [SerializeField] private Button paytableOpenButton;
+        [SerializeField] private Button paytableCloseButton;
 
         public event Action OnSpinClicked;
         public event Action OnIncreaseBetClicked;
         public event Action OnDecreaseBetClicked;
         public event Action OnMaxBetClicked;
+        public event Action<int> OnQuickBetSelected;
 
         private void Awake()
         {
+            // Spin Button
             if (spinButton != null)
             {
                 spinButton.onClick.AddListener(delegate { if (OnSpinClicked != null) OnSpinClicked(); });
             }
+
+            // Bet Adjusters
             if (increaseBetButton != null)
             {
                 increaseBetButton.onClick.AddListener(delegate { if (OnIncreaseBetClicked != null) OnIncreaseBetClicked(); });
@@ -49,6 +70,30 @@ namespace LuckySpin.SlotMachine.UI
             if (maxBetButton != null)
             {
                 maxBetButton.onClick.AddListener(delegate { if (OnMaxBetClicked != null) OnMaxBetClicked(); });
+            }
+
+            // Quick Bet Presets
+            if (bet10Button != null)
+            {
+                bet10Button.onClick.AddListener(delegate { if (OnQuickBetSelected != null) OnQuickBetSelected(10); });
+            }
+            if (bet50Button != null)
+            {
+                bet50Button.onClick.AddListener(delegate { if (OnQuickBetSelected != null) OnQuickBetSelected(50); });
+            }
+            if (bet100Button != null)
+            {
+                bet100Button.onClick.AddListener(delegate { if (OnQuickBetSelected != null) OnQuickBetSelected(100); });
+            }
+
+            // Paytable Modal Controls
+            if (paytableOpenButton != null)
+            {
+                paytableOpenButton.onClick.AddListener(OpenPaytable);
+            }
+            if (paytableCloseButton != null)
+            {
+                paytableCloseButton.onClick.AddListener(ClosePaytable);
             }
         }
 
@@ -64,7 +109,19 @@ namespace LuckySpin.SlotMachine.UI
         {
             if (betText != null)
             {
-                betText.text = string.Format("BET {0:N0}", newBet);
+                betText.text = string.Format("BET {0:N0} G", newBet);
+            }
+        }
+
+        public void UpdateStatus(string statusMessage, Color? statusColor = null)
+        {
+            if (statusIndicatorText != null)
+            {
+                statusIndicatorText.text = statusMessage;
+                if (statusColor.HasValue)
+                {
+                    statusIndicatorText.color = statusColor.Value;
+                }
             }
         }
 
@@ -74,14 +131,71 @@ namespace LuckySpin.SlotMachine.UI
             {
                 spinButton.interactable = interactable;
             }
+            if (increaseBetButton != null) increaseBetButton.interactable = interactable;
+            if (decreaseBetButton != null) decreaseBetButton.interactable = interactable;
+            if (maxBetButton != null) maxBetButton.interactable = interactable;
+            if (bet10Button != null) bet10Button.interactable = interactable;
+            if (bet50Button != null) bet50Button.interactable = interactable;
+            if (bet100Button != null) bet100Button.interactable = interactable;
+        }
+
+        public void ShowWinBanner(int amount, string symbol)
+        {
+            if (resultBannerRoot != null)
+            {
+                resultBannerRoot.SetActive(true);
+            }
+            if (resultTitleText != null)
+            {
+                resultTitleText.text = string.Format("WINNER! 3x {0}", symbol.ToUpper());
+                resultTitleText.color = new Color(1f, 0.85f, 0.2f, 1f); // Vibrant gold
+            }
+            if (resultPayoutText != null)
+            {
+                resultPayoutText.text = string.Format("+{0:N0} G", amount);
+            }
+        }
+
+        public void ShowLossBanner()
+        {
+            if (resultBannerRoot != null)
+            {
+                resultBannerRoot.SetActive(true);
+            }
+            if (resultTitleText != null)
+            {
+                resultTitleText.text = "NO MATCH";
+                resultTitleText.color = new Color(0.7f, 0.7f, 0.8f, 1f); // Subtle silver/blue
+            }
+            if (resultPayoutText != null)
+            {
+                resultPayoutText.text = "TRY AGAIN!";
+            }
+        }
+
+        public void HideResultBanner()
+        {
+            if (resultBannerRoot != null)
+            {
+                resultBannerRoot.SetActive(false);
+            }
         }
 
         public void DisplayMessage(string message)
         {
-            if (messageBannerText != null)
-            {
-                messageBannerText.text = message;
-            }
+            UpdateStatus(message, new Color(1f, 0.4f, 0.4f, 1f));
         }
+
+        public void OpenPaytable()
+        {
+            if (paytableModal != null) paytableModal.SetActive(true);
+        }
+
+        public void ClosePaytable()
+        {
+            if (paytableModal != null) paytableModal.SetActive(false);
+        }
+
+        public SpinHistoryUI HistoryUI { get { return spinHistoryUI; } }
     }
 }

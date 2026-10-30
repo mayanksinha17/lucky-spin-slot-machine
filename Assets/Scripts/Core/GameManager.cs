@@ -35,6 +35,7 @@ namespace LuckySpin.SlotMachine.Core
         [SerializeField] private SlotMachineController slotMachine;
         [SerializeField] private UIManager uiManager;
         [SerializeField] private AudioManager audioManager;
+        [SerializeField] private GameHistoryManager historyManager;
 
         [Header("Runtime State")]
         [SerializeField] private GameState currentState = GameState.Idle;
@@ -85,6 +86,12 @@ namespace LuckySpin.SlotMachine.Core
                 uiManager.OnIncreaseBetClicked += IncreaseBet;
                 uiManager.OnDecreaseBetClicked += DecreaseBet;
                 uiManager.OnMaxBetClicked += SetMaxBet;
+                uiManager.OnQuickBetSelected += SetBet;
+            }
+
+            if (historyManager != null && uiManager != null && uiManager.HistoryUI != null)
+            {
+                historyManager.OnSpinRecorded += uiManager.HistoryUI.AddRecord;
             }
         }
 
@@ -97,7 +104,7 @@ namespace LuckySpin.SlotMachine.Core
                 SetState(GameState.InsufficientFunds);
                 if (uiManager != null)
                 {
-                    uiManager.DisplayMessage("Insufficient Credits! Please lower your bet.");
+                    uiManager.DisplayMessage("Insufficient Credits! Lower bet or reset balance.");
                 }
                 return;
             }
@@ -111,20 +118,20 @@ namespace LuckySpin.SlotMachine.Core
             if (uiManager != null)
             {
                 uiManager.UpdateBalance(balance);
+                uiManager.HideResultBanner();
             }
 
             SetState(GameState.Spinning);
             if (uiManager != null)
             {
                 uiManager.SetSpinInteractable(false);
+                uiManager.UpdateStatus("SPINNING...", new Color(0.9f, 0.7f, 1f, 1f));
             }
             if (audioManager != null)
             {
                 audioManager.PlayButtonClick();
                 audioManager.StartSpinLoop();
             }
-
-            // Note: Full RNG and sequential stop triggers will be connected in Phase 3 & 4
         }
 
         public void IncreaseBet()
@@ -133,9 +140,7 @@ namespace LuckySpin.SlotMachine.Core
             if (currentBet + betStep <= maxBet)
             {
                 currentBet += betStep;
-                if (audioManager != null) audioManager.PlayButtonClick();
-                if (OnBetChanged != null) OnBetChanged(currentBet);
-                if (uiManager != null) uiManager.UpdateBet(currentBet);
+                OnBetUpdated();
             }
         }
 
@@ -145,9 +150,7 @@ namespace LuckySpin.SlotMachine.Core
             if (currentBet - betStep >= minBet)
             {
                 currentBet -= betStep;
-                if (audioManager != null) audioManager.PlayButtonClick();
-                if (OnBetChanged != null) OnBetChanged(currentBet);
-                if (uiManager != null) uiManager.UpdateBet(currentBet);
+                OnBetUpdated();
             }
         }
 
@@ -155,6 +158,18 @@ namespace LuckySpin.SlotMachine.Core
         {
             if (currentState != GameState.Idle) return;
             currentBet = maxBet;
+            OnBetUpdated();
+        }
+
+        public void SetBet(int amount)
+        {
+            if (currentState != GameState.Idle) return;
+            currentBet = Mathf.Clamp(amount, minBet, maxBet);
+            OnBetUpdated();
+        }
+
+        private void OnBetUpdated()
+        {
             if (audioManager != null) audioManager.PlayButtonClick();
             if (OnBetChanged != null) OnBetChanged(currentBet);
             if (uiManager != null) uiManager.UpdateBet(currentBet);
@@ -166,6 +181,28 @@ namespace LuckySpin.SlotMachine.Core
             if (OnStateChanged != null)
             {
                 OnStateChanged(currentState);
+            }
+
+            if (uiManager != null)
+            {
+                switch (currentState)
+                {
+                    case GameState.Idle:
+                        uiManager.UpdateStatus("READY TO SPIN", new Color(0.4f, 0.9f, 0.5f, 1f));
+                        break;
+                    case GameState.Spinning:
+                        uiManager.UpdateStatus("SPINNING...", new Color(0.85f, 0.65f, 1f, 1f));
+                        break;
+                    case GameState.Evaluating:
+                        uiManager.UpdateStatus("EVALUATING...", new Color(1f, 0.85f, 0.3f, 1f));
+                        break;
+                    case GameState.Payout:
+                        uiManager.UpdateStatus("PAYOUT!", new Color(1f, 0.9f, 0.2f, 1f));
+                        break;
+                    case GameState.InsufficientFunds:
+                        uiManager.UpdateStatus("INSUFFICIENT FUNDS", new Color(1f, 0.35f, 0.35f, 1f));
+                        break;
+                }
             }
         }
 
