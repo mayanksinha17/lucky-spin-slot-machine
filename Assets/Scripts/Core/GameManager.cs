@@ -95,7 +95,10 @@ namespace LuckySpin.SlotMachine.Core
                 };
                 payoutManager.OnInsufficientFunds += delegate {
                     SetState(GameState.InsufficientFunds);
-                    if (uiManager != null) uiManager.DisplayMessage("Insufficient Credits! Please lower your bet.");
+                };
+                payoutManager.OnInsufficientFundsDetailed += delegate(int req, int bal) {
+                    SetState(GameState.InsufficientFunds);
+                    if (uiManager != null) uiManager.ShowInsufficientCreditsNotice(req, bal);
                 };
             }
 
@@ -178,14 +181,16 @@ namespace LuckySpin.SlotMachine.Core
 
             SetState(GameState.Evaluating);
 
-            // Process payout and display results
+            // Settle transaction and process payout
+            int payoutAmount = 0;
+            if (payoutManager != null)
+            {
+                payoutAmount = payoutManager.AwardPayout(lastResult);
+            }
+
             if (lastResult.IsWin)
             {
                 SetState(GameState.Payout);
-                if (payoutManager != null)
-                {
-                    payoutManager.AwardPayout(lastResult);
-                }
                 if (slotMachine != null)
                 {
                     slotMachine.SetPaylineHighlights(true);
@@ -198,7 +203,7 @@ namespace LuckySpin.SlotMachine.Core
                 if (uiManager != null)
                 {
                     string symName = lastResult.WinningSymbol != null ? lastResult.WinningSymbol.DisplayName : "MATCH";
-                    uiManager.ShowWinBanner(lastResult.Payout, symName);
+                    uiManager.ShowWinBanner(payoutAmount, symName);
                 }
             }
             else
@@ -218,8 +223,15 @@ namespace LuckySpin.SlotMachine.Core
                     types[i] = currentPredeterminedOutcomes[i] != null ? currentPredeterminedOutcomes[i].Type : (SymbolType)(-1);
                 }
                 int bet = payoutManager != null ? payoutManager.CurrentBet : 10;
-                SpinRecord record = new SpinRecord(0, types, bet, lastResult.Payout, lastResult.IsWin);
+                int balAfter = payoutManager != null ? payoutManager.CurrentBalance : 0;
+                SpinRecord record = new SpinRecord(0, types, bet, payoutAmount, lastResult.IsWin, balAfter);
                 historyManager.RecordSpin(record);
+            }
+
+            // Auto-adjust bet if balance is now less than current bet
+            if (payoutManager != null)
+            {
+                payoutManager.AutoAdjustBetToAffordable();
             }
 
             // Return to Idle ready for next spin
@@ -268,6 +280,22 @@ namespace LuckySpin.SlotMachine.Core
                 uiManager.UpdateBalance(payoutManager.CurrentBalance);
                 uiManager.UpdateBet(payoutManager.CurrentBet);
                 uiManager.SetSpinInteractable(currentState == GameState.Idle);
+            }
+        }
+
+        /// <summary>
+        /// Reloads player's virtual balance with demo credits (default: 1,000 G).
+        /// </summary>
+        public void ReloadCredits(int amount = 1000)
+        {
+            if (payoutManager != null)
+            {
+                payoutManager.ResetBalance(amount);
+            }
+            SetState(GameState.Idle);
+            if (uiManager != null)
+            {
+                uiManager.DisplayMessage("Credits Reloaded! +1,000 G");
             }
         }
     }

@@ -229,6 +229,11 @@ namespace LuckySpin.SlotMachine.UI
             UpdateStatus(message, new Color(1f, 0.4f, 0.4f, 1f));
         }
 
+        public void ShowInsufficientCreditsNotice(int requiredBet, int currentBalance)
+        {
+            UpdateStatus(string.Format("NEED {0} G (HAVE {1} G) - PLEASE LOWER BET", requiredBet, currentBalance), new Color(1f, 0.35f, 0.35f, 1f));
+        }
+
         public void OpenPaytable()
         {
             if (paytableModal != null)

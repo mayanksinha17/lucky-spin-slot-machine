@@ -20,6 +20,7 @@
 | **Phase 3** | Slot Machine Reel Architecture & Configuration | **Completed** | 3 independent reels, SymbolDatabase, sizing, alignment, prefabs, and test suite passing (5/5) |
 | **Phase 4** | Core Gameplay Engine (RNG, Evaluator, Payouts) | **Completed** | RNG generator, winning evaluator, payout manager, 13/13 total tests passing |
 | **Phase 5** | Reel Animation System & Motion Polish | **Completed** | Smooth acceleration, EaseOutBack deceleration, sequential stopping, UI punch/rollup/particles, 19/19 tests passing |
+| **Virtual Credit System** | Centralized Virtual Credit, Wallet & Transaction Ledger | **Completed** | Centralized balance ledger, atomic bet deduction, payout calculation, duplicate prevention, audit trail, 35/35 tests passing |
 | **Phase 6** | Audio System & Visual Effects (Particles/Glow) | **Next Up** | Ready for approval |
 | **Phase 7** | Bonus Features (Auto-spin, Win Streak, History) | Pending | - |
 | **Phase 8** | Integration & End-to-End Testing | Pending | - |
@@ -28,42 +29,55 @@
 
 ---
 
-### Phase 5 Execution Summary
+### Virtual Credit System Implementation Summary
 
-#### 1. Reel Physics & Motion Dynamics
-* [`ReelController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Reels/ReelController.cs):
-  * **State Machine**: Explicit 5-state lifecycle (`Idle`, `Accelerating`, `Spinning`, `Decelerating`, `Settling`).
-  * **Smooth Acceleration**: Ramps from $0$ to terminal velocity ($1,600\text{px/sec}$) over $0.35\text{s}$ using `UIAnimationHelper.EaseInQuad(t)`.
-  * **Continuous Wrap-Around Scrolling**: Moves symbol slots downwards seamlessly. When a slot crosses the bottom boundary ($-300\text{px}$), it wraps around to the top ($+450\text{px}$) with a newly assigned random symbol from `SymbolDatabase`.
-  * **Mechanical Deceleration & Bounce Overshoot**: Eases to a stop over $0.65\text{s}$ using an authentic arcade `EaseOutBack(t, 1.3f)` curve. Slots overshoot past their resting coordinates by up to $22\text{px}$ before springing back into alignment.
-  * **Pixel-Perfect Alignment Guarantee**: At completion of deceleration, `ApplyLayoutAlignment()` snaps center payline slot to $y = 0\text{px}$, top slot to $y = +150\text{px}$, and bottom slot to $y = -150\text{px}$.
+#### 1. Centralized Economy & Wallet Architecture ([`PayoutManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/PayoutManager.cs))
+* **Single Source of Truth**: All balance mutations, deductions, and payouts are routed through `PayoutManager`. No component directly modifies credits.
+* **Configurable Balance & Bet Bounds**:
+  * Default Starting Balance: $1,000\text{G}$ (configurable in Inspector).
+  * Minimum Bet: $10\text{G}$.
+  * Maximum Bet: $100\text{G}$.
+  * Bet Step Increment: $10\text{G}$.
+  * Quick Bet Presets: $10\text{G}$, $50\text{G}$, $100\text{G}$.
+* **Transaction Locking & Concurrency Guard**:
+  * Atomically creates a unique transaction ID (`TXN_{Counter}_{Timestamp}`) upon bet deduction.
+  * Rejects duplicate bet deductions while an in-flight transaction is unsettled.
+  * Rejects duplicate payout claims on already-settled transactions.
+  * Supports transaction refund/reversal (`CancelAndRefundActiveTransaction()`) if a spin is aborted.
+* **Payout Calculation Formula**:
+  $$\text{Payout} = \text{Bet Amount} \times \text{Symbol Multiplier}$$
+  * Cherry: $2\times$
+  * Bell: $5\times$
+  * Double BAR: $10\times$
+  * Lucky 7: $25\times$
+  * Diamond: $100\times$ (Jackpot)
+  * Loss: $0\times$ (0 payout)
+* **Auto-Adjustment on Low Balance**:
+  * `AutoAdjustBetToAffordable()`: If the player's balance drops below their selected bet, automatically steps the bet down to the highest affordable step multiple.
+* **Demo Credit Reload**:
+  * `ResetBalance(1000)`: Allows reloading demo credits to prevent game-over deadlocks.
 
-#### 2. Staggered Sequential Reel Stopping
-* [`SlotMachineController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/SlotMachineController.cs):
-  * **Base Spin Duration**: All reels spin at high speed for $1.2\text{s}$ to build excitement.
-  * **Sequential Staggered Stops**:
-    * **Reel 0 (Left)** stops at $t = 1.20\text{s}$.
-    * **Reel 1 (Center)** stops at $t = 1.58\text{s}$ ($+0.38\text{s}$ delay).
-    * **Reel 2 (Right)** stops at $t = 1.96\text{s}$ ($+0.38\text{s}$ delay).
-  * Synchronization event `OnAllReelsStopped` fires strictly after Reel 2 finishes its settling animation.
+#### 2. Detailed Notifications & UI Integration ([`UIManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/UI/UIManager.cs))
+* **Balance & Bet Display**: Dynamic HUD formatted with thousand separators (`1,000 G`, `BET 50 G`).
+* **Win Banner**: Celebratory popup modal with `EaseOutBack` pop-in, symbol headline, and rollup numerical credit counter.
+* **Loss Banner**: Clean, non-intrusive notification informing the player of the outcome.
+* **Insufficient Credit Alerts**: Dedicated alert: `"NEED {X} G (HAVE {Y} G) - PLEASE LOWER BET"`.
+* **Coin Particle Shower**: Spawns 25 animated golden coins on every winning spin.
 
-#### 3. RNG & Presentation Decoupling Guarantee
-* **Pre-Determined Outcomes**: The RNG outcome is completely determined by `RandomOutcomeGenerator` *prior* to triggering reel animation in `GameManager.RequestSpin()`.
-* **Zero Alteration**: Reel presentation scripts only display the pre-calculated symbols. Reels cannot mutate, re-roll, or deviate from the predetermined outcome.
-* **Concurrent Spin Prevention**: `GameManager` validates that `currentState == GameState.Idle` before processing spins; `ReelController` guards `StartSpinning()` if `IsSpinning` is true; `UIManager` disables button interactivity during active spins.
-
-#### 4. UI Feedback & Particle Effects
-* [`UIAnimationHelper.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Animations/UIAnimationHelper.cs):
-  * `PunchScaleRoutine`: Damped harmonic elastic scaling for button click feedback.
-  * `PopInRoutine`: `EaseOutBack` pop-in effect ($0.0 \to 1.15 \to 1.0$) for win/loss result banners and modals.
-  * `RollupTextRoutine`: Smooth numerical rollup counter for winning credit payouts.
-* [`CoinParticleController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Animations/CoinParticleController.cs):
-  * Dynamic canvas particle fountain spawning 25 golden coins on every winning spin.
-  * Physical trajectory with gravity ($-1,400\text{px/s}^2$), random radial velocity, rotation spin, and alpha fadeout.
+#### 3. Audit Trail & Spin History ([`SpinRecord.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/SpinRecord.cs) & [`GameHistoryManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/GameHistoryManager.cs))
+* Tracks complete financial audit trail per spin:
+  * Spin Number & Timestamp
+  * 3-Symbol Payline Configuration
+  * Bet Placed ($10\text{G} - 100\text{G}$)
+  * Payout Awarded
+  * Net Profit/Loss ($\text{Payout} - \text{Bet}$)
+  * Balance After Spin
+  * Transaction ID
+* Displayed in collapsible, interactive slide-out history drawer.
 
 ---
 
-### Automated Unit Test Results
+### Automated Unit & Edge Case Test Suite Results
 
 ```
 =================================================
@@ -97,8 +111,27 @@ Gameplay Tests: 8 | Passed: 8 | Failed: 0
 [PASS] ConcurrentSpinsPreventedDuringActiveAnimation
 [PASS] ReelSettlingSnapsToPixelPerfectAlignment
 Animation Tests: 6 | Passed: 6 | Failed: 0
+
+[4] VIRTUAL CREDIT & ECONOMY SUITE:
+[PASS] StartingBalance_InitializedAccurately
+[PASS] BetAdjustments_WithinMinMaxAndStepBounds
+[PASS] BetPresets_SetExactValidValues
+[PASS] InsufficientCredits_SpinBlockedAndFiresEvent
+[PASS] ExactBalanceSpin_AllowedAndResultsInZeroBalance
+[PASS] CreditDeduction_DeductsExactBetAmount
+[PASS] PayoutCalculation_FormulaExact_AllMultipliers
+[PASS] PayoutAward_CreditsBalanceAccurately
+[PASS] LossEvaluation_ZeroPayoutAndBalanceSettled
+[PASS] TransactionLocking_PreventsDuplicateDeduction
+[PASS] TransactionLocking_PreventsDuplicatePayoutClaims
+[PASS] InvalidBetAmount_RejectedGracefully
+[PASS] BalanceReset_RestoresExactDemoBalance
+[PASS] AutoAdjustBet_StepsDownWhenBalanceLow
+[PASS] TransactionRefund_CancelsActiveTransaction
+[PASS] SpinHistory_AuditTrailRecordsAllTransactions
+Credit Tests: 16 | Passed: 16 | Failed: 0
 =================================================
-GRAND TOTAL: 19 Tests | Passed: 19 | Failed: 0 (100% Pass Rate)
+GRAND TOTAL: 35 Tests | Passed: 35 | Failed: 0 (100% Pass Rate)
 =================================================
 ```
 
@@ -106,7 +139,7 @@ GRAND TOTAL: 19 Tests | Passed: 19 | Failed: 0 (100% Pass Rate)
 
 ### Next Phase: Phase 6 (Audio System & Visual Effects Polish)
 Objectives for Phase 6:
-1. Wire all audio clips (`button_click.wav`, `spin_loop.wav`, `reel_stop.wav`, `win_chime.wav`, `coin_payout.wav`) to gameplay lifecycle events.
-2. Implement reel stop audio synchronization for each individual reel.
-3. Implement winning payline flashing marquee lights and glow effect.
-4. Provide audio volume toggle and mute controls on the cabinet HUD.
+1. Wire all 5 audio clips (`button_click.wav`, `spin_loop.wav`, `reel_stop.wav`, `win_chime.wav`, `coin_payout.wav`) to gameplay lifecycle events.
+2. Synchronize individual reel stop audio for each staggered reel.
+3. Implement flashing marquee lights and glow effects around the payline aperture.
+4. Add audio mute and volume toggle controls on the cabinet HUD.
