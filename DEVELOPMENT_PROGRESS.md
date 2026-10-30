@@ -17,9 +17,9 @@
 | **Phase 0** | Inspection, Asset Inventory & Implementation Plan | **Completed** | Full asset audit & architecture plan approved |
 | **Phase 1** | Project Initialization, Environment & Foundation | **Completed** | 40 files committed; C# compiled cleanly with 0 errors; Scene hierarchy established |
 | **Phase 2** | Complete Slot Machine Interface & UI Pipeline | **Completed** | Full arcade cabinet, reels, HUD, controls, history drawer, and 5 symbols generated & verified |
-| **Phase 3** | Core Game Logic (RNG, Evaluator, Payout Engine) | **Next Up** | Ready for approval |
-| **Phase 4** | Reel Controllers & Eased Animation System | Pending | - |
-| **Phase 5** | Arcade UI/UX Polish & State Management | Pending | - |
+| **Phase 3** | Slot Machine Reel Architecture & Configuration | **Completed** | 3 independent reels, SymbolDatabase, sizing, alignment, prefabs, and test suite passing (5/5) |
+| **Phase 4** | Reel Animation System & Motion Polish | **Next Up** | Ready for approval |
+| **Phase 5** | Core Game Logic (RNG, Evaluator, Payout Engine) | Pending | - |
 | **Phase 6** | Audio System & Visual Effects (Particles/Glow) | Pending | - |
 | **Phase 7** | Bonus Features (Auto-spin, Win Streak, History) | Pending | - |
 | **Phase 8** | Unit & Integration Testing Suite | Pending | - |
@@ -28,70 +28,72 @@
 
 ---
 
-### Phase 2 Execution Summary
+### Phase 3 Execution Summary
 
-#### 1. Interface Components Implemented
-* **Main Background**: Fullscreen dot matrix backdrop (`bg_dots.jpg`) anchored stretch (0..1) with deep purple vignette.
-* **Game Title & Marquee**: Gold and purple arched marquee with bold "JACKPOT" and "LUCKY SPIN" styling.
-* **Three Reel Containers**:
-  * Left Reel (Index 0), Center Reel (Index 1), Right Reel (Index 2) with chrome dividers and 3-row visible aperture window.
-  * Symbol display areas instantiated inside reel containers.
-* **Balance Display (HUD)**:
-  * Prominent credits pill in top bar with high-contrast radiant gold typography (`1,000 G`).
-* **Bet Controls Deck**:
-  * Dedicated bet display card (`BET 10 G`).
-  * Minus (`-`) and Plus (`+`) buttons for 10G step adjustments.
-  * `MAX` button to jump straight to 100G maximum bet.
-  * Quick Bet Preset buttons (`10`, `50`, `100`) matching `reference_cabinet.png`.
-* **Spin Button**:
-  * Prominent arcade spin trigger utilizing all 4 sprite states of `button_play.png` (Normal, Hover, Pressed, Disabled) and `[Spacebar]` / `[Enter]` keyboard shortcuts.
-* **Result Notification Area**:
-  * Centered banner popup (`ui_panel.png` 9-sliced) with title ("WINNER! 3x BELL"), payout count ("+50 G"), and loss indicator ("NO MATCH / TRY AGAIN!").
-* **Game Status Indicator**:
-  * Real-time status badge ("READY TO SPIN" in green, "SPINNING..." in purple, "EVALUATING..." in amber, "PAYOUT!" in gold).
-* **Recent Spin History Section**:
-  * Collapsible drawer panel with scrollable list container, close button (`button_close.png`), and `SpinHistoryItem.prefab` rows showing spin index, outcome symbols, bet, and net gain/loss.
+#### 1. Three Independent Reels Implemented
+* **Reel Controllers**:
+  * `Reel_Left` (Reel Index 0)
+  * `Reel_Center` (Reel Index 1)
+  * `Reel_Right` (Reel Index 2)
+* Each reel operates with complete independence:
+  * Separate state tracking (`isSpinning`, `currentPaylineSymbol`).
+  * Independent events (`OnReelSpinStarted`, `OnReelStopped`).
+  * Independent symbol slots, allowing one reel to spin while others are stationary.
 
-#### 2. Visual Assets & Audio Generated
-* **5 High-Resolution Symbol Sprites (256x256 Transparent PNGs)**:
-  * 🍒 **Cherry** (`symbol_cherry.png`): Double red cherries with green stem, leaf, and specular gloss.
-  * 🔔 **Bell** (`symbol_bell.png`): Golden bell with bronze clapper and rim highlight.
-  * 🍫 **BAR** (`symbol_bar.png`): Classic double-decker BAR sign with neon typography and gold border.
-  * 7️⃣ **Seven** (`symbol_seven.png`): Radiant crimson Lucky 7 with gold border and 3D bevel.
-  * 💎 **Diamond** (`symbol_diamond.png`): Faceted cyan/azure gem with radiant star sparkle.
-* **5 `SymbolData` ScriptableObject Assets**:
-  * `CherryData.asset` (Multiplier: 2x, Weight: 35)
-  * `BellData.asset` (Multiplier: 5x, Weight: 25)
-  * `BarData.asset` (Multiplier: 10x, Weight: 20)
-  * `SevenData.asset` (Multiplier: 25x, Weight: 15)
-  * `DiamondData.asset` (Multiplier: 100x Jackpot, Weight: 5)
-* **5 WebGL-Compatible 16-bit 44.1kHz Audio Clips**:
-  * `button_click.wav` (80ms click)
-  * `spin_loop.wav` (1000ms seamless mechanical loop)
-  * `reel_stop.wav` (150ms ratchet thud)
-  * `win_chime.wav` (900ms fanfare arpeggio)
-  * `coin_payout.wav` (600ms metallic coin fountain)
+#### 2. Reusable ReelController & Symbol Hierarchy
+* [`ReelController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Reels/ReelController.cs):
+  * Manages an array of `SymbolItemView` slots (5 slots: TopBuffer, Top, Center Payline, Bottom, BottomBuffer).
+  * Encapsulates layout positioning, vertical pitch ($150\text{px}$), and icon sizing ($150 \times 150\text{px}$).
+  * Supports dynamic symbol replacement on individual slots (`ReplaceSymbol(int slotIndex, SymbolData newSymbol)`).
+  * Exposes explicit methods to set the 3 visible symbols (`SetVisibleSymbols()`) or single center payline target (`SetCenterPaylineSymbol()`).
+  * Enforces payline highlighting (`SetPaylineHighlight(bool)`).
+* [`SymbolItemView.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Reels/SymbolItemView.cs):
+  * Reusable slot component holding icon image, background plate, and golden highlight border.
+  * Preserves aspect ratio with crisp centering.
 
-#### 3. Responsive Layout Verification Matrix
-Evaluated canvas scaling and cabinet bounding dimensions across 5 aspect ratios:
+#### 3. Symbol Data Configuration & Asset Database
+* [`SymbolDatabase.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Data/SymbolDatabase.cs):
+  * Central ScriptableObject holding all game symbols.
+  * Asset created at `Assets/Art/Symbols/DefaultSymbolDatabase.asset`.
+  * Wires all 5 production symbols:
+    * 🍒 **Cherry** (`CherryData.asset` - 2x payout, weight 35)
+    * 🔔 **Bell** (`BellData.asset` - 5x payout, weight 25)
+    * 🍫 **Double BAR** (`BarData.asset` - 10x payout, weight 20)
+    * 7️⃣ **Lucky 7** (`SevenData.asset` - 25x payout, weight 15)
+    * 💎 **Diamond** (`DiamondData.asset` - 100x payout, weight 5)
 
-| Target Display | Resolution | Match Mode | Scale Factor | Effective Viewport | Cabinet (1040x720) Fits |
-|---|---|---|---|---|:---:|
-| **16:9 Full HD** | 1920 × 1080 | Height (1.0) | 1.000 | 1920 × 1080 | **YES** |
-| **16:10 Laptop** | 1920 × 1200 | Width (0.0) | 1.000 | 1920 × 1200 | **YES** |
-| **4:3 Standard** | 1024 × 768 | Width (0.0) | 0.533 | 1920 × 1440 | **YES** |
-| **21:9 Ultrawide** | 2560 × 1080 | Height (1.0) | 1.000 | 2560 × 1080 | **YES** |
-| **Mobile Portrait (9:16)** | 1080 × 1920 | Width (0.0) | 0.562 | 1920 × 3413 | **YES** |
+#### 4. Alignment, Sizing & Decoupling
+* **Sizing**: Symbols are normalized to $150 \times 150\text{px}$ within a $250\text{px}$ wide reel aperture.
+* **Alignment**:
+  * Top Row: $y = +150\text{px}$
+  * Center Payline: $y = 0\text{px}$
+  * Bottom Row: $y = -150\text{px}$
+* **Presentation Decoupling**: `ReelController` never calculates or alters game outcomes. It only presents predetermined `SymbolData` instances provided by `SlotMachineController` or caller code.
 
-#### 4. Verification & Git Log
-* **C# Compilation**: Verified via `csc.exe` across all 15 source files. **0 compilation errors.**
-* **Git Commit**: `6b448e8: feat(ui): Build complete slot machine interface with responsive layout, reels, HUD, controls, and history`.
+#### 5. Reusable Prefabs Created
+* [`SymbolItem.prefab`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Prefabs/Reels/SymbolItem.prefab): Modular UI slot with `SymbolItemView`, icon, border, and plate.
+* [`Reel.prefab`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Prefabs/Reels/Reel.prefab): Complete reel unit with `ReelController`, aperture mask, and symbol container.
+
+#### 6. Unit Testing & Verification Suite
+Executed automated test runner [`ReelArchitectureTests.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Tests/ReelArchitectureTests.cs):
+
+| Test Case | Description | Result |
+|---|---|:---:|
+| `SymbolDatabase_ConfiguredCorrectly` | Verifies all 5 symbols loaded with correct multipliers & weights | **PASS** |
+| `ReelController_SlotSizingAndAlignment` | Verifies vertical pitch ($150\text{px}$), center $y=0$, top $y=+150$, bottom $y=-150$ | **PASS** |
+| `Reels_OperateIndependently` | Verifies spinning one reel leaves others unaffected | **PASS** |
+| `SymbolReplacement_UpdatesTargetSlotOnly` | Verifies replacing a slot does not corrupt neighboring slots | **PASS** |
+| `PresentationSeparatedFromOutcomeGeneration` | Verifies reel only reflects external predetermined outcome | **PASS** |
+
+**Test Execution Summary: 5 Run, 5 Passed, 0 Failed (100% Pass Rate).**
+
+* **Git Commit**: `c60c6e7: feat(reels): Implement independent reel architecture, symbol configuration, sizing, alignment, and test suite`.
 
 ---
 
-### Next Phase: Phase 3 (Core Domain Logic: RNG, Evaluator & Payout Engine)
-Objectives for Phase 3:
-1. Implement `RandomOutcomeGenerator.cs` (independent RNG, weighted probabilities, seedable deterministic mode for automated unit tests).
-2. Implement `WinningEvaluator.cs` (3-of-a-kind detection, symbol identification, payout multiplier resolution).
-3. Implement `PayoutManager.cs` (bet deduction, multiplier math, balance credit updates, insufficient funds protection).
-4. Wire core logic directly into `GameManager`.
+### Next Phase: Phase 4 (Reel Animation & Motion System)
+Objectives for Phase 4:
+1. Implement physics-like smooth acceleration from rest to terminal speed.
+2. Implement continuous vertical symbol scrolling loop with wrap-around math.
+3. Implement eased deceleration (`EaseOutBack` / mechanical bounce overshoot) stopping precisely on the predetermined payline symbol.
+4. Implement sequential reel stopping with configurable delays between reels (Left -> Center -> Right).
