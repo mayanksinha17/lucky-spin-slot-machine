@@ -1775,6 +1775,9 @@ GameObject:
   m_Component:
   - component: {fileID: 9001}
   - component: {fileID: 9002}
+  - component: {fileID: 9003}
+  - component: {fileID: 9004}
+  - component: {fileID: 9005}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1809,14 +1812,56 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1f418cfc440bab7c31c9bd1914fe262, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotMachine: {fileID: 504}
+  outcomeGenerator: {fileID: 9004}
+  winningEvaluator: {fileID: 9005}
+  payoutManager: {fileID: 9003}
+  uiManager: {fileID: 702}
+  audioManager: {fileID: 802}
+  historyManager: {fileID: 1402}
+  symbolDatabase: {fileID: 11400000, guid: 5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d, type: 2}
+  currentState: 0
+--- !u!114 &9003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e92b24b8d41e43aead6a84d7f3a44280, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   startingBalance: 1000
   currentBet: 10
   minBet: 10
   maxBet: 100
   betStep: 10
-  slotMachine: {fileID: 504}
-  uiManager: {fileID: 702}
-  audioManager: {fileID: 802}
-  historyManager: {fileID: 1402}
-  currentState: 0
-  balance: 1000
+  currentBalance: 1000
+--- !u!114 &9004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eaa7009361de5c811631f5cfdfc9c720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  symbolDatabase: {fileID: 11400000, guid: 5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d, type: 2}
+  useWeightedProbabilities: 1
+--- !u!114 &9005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10890cefddc498fc772eddd9e85df6f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

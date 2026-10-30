@@ -42,3 +42,4 @@ namespace LuckySpin.SlotMachine.Data
         }
     }
 }
+

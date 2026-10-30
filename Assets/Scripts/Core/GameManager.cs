@@ -9,47 +9,34 @@ using LuckySpin.SlotMachine.Audio;
 namespace LuckySpin.SlotMachine.Core
 {
     /// <summary>
-    /// Master coordinator for game lifecycle, player balance, betting state, and subsystem communication.
+    /// Master coordinator orchestrating gameplay flow, RNG generation, evaluation, payout distribution, and UI/Audio sync.
     /// </summary>
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
 
-        [Header("Economy Configuration")]
-        [Tooltip("Initial player credits.")]
-        [SerializeField] private int startingBalance = 1000;
-
-        [Tooltip("Current bet placed per spin.")]
-        [SerializeField] private int currentBet = 10;
-
-        [Tooltip("Minimum allowable bet.")]
-        [SerializeField] private int minBet = 10;
-
-        [Tooltip("Maximum allowable bet.")]
-        [SerializeField] private int maxBet = 100;
-
-        [Tooltip("Step increment for bet adjustments.")]
-        [SerializeField] private int betStep = 10;
-
         [Header("Subsystem Controllers")]
         [SerializeField] private SlotMachineController slotMachine;
+        [SerializeField] private RandomOutcomeGenerator outcomeGenerator;
+        [SerializeField] private WinningEvaluator winningEvaluator;
+        [SerializeField] private PayoutManager payoutManager;
         [SerializeField] private UIManager uiManager;
         [SerializeField] private AudioManager audioManager;
         [SerializeField] private GameHistoryManager historyManager;
 
+        [Header("Configuration")]
+        [SerializeField] private SymbolDatabase symbolDatabase;
+
         [Header("Runtime State")]
         [SerializeField] private GameState currentState = GameState.Idle;
-        [SerializeField] private int balance;
+        [SerializeField] private EvaluationResult lastResult;
+        [SerializeField] private SymbolData[] currentPredeterminedOutcomes;
 
         public GameState CurrentState { get { return currentState; } }
-        public int Balance { get { return balance; } }
-        public int CurrentBet { get { return currentBet; } }
-        public int MinBet { get { return minBet; } }
-        public int MaxBet { get { return maxBet; } }
+        public PayoutManager Payouts { get { return payoutManager; } }
+        public EvaluationResult LastResult { get { return lastResult; } }
 
         public event Action<GameState> OnStateChanged;
-        public event Action<int> OnBalanceChanged;
-        public event Action<int> OnBetChanged;
 
         private void Awake()
         {
@@ -59,7 +46,8 @@ namespace LuckySpin.SlotMachine.Core
                 return;
             }
             Instance = this;
-            balance = startingBalance;
+
+            EnsureComponents();
         }
 
         private void Start()
@@ -71,22 +59,58 @@ namespace LuckySpin.SlotMachine.Core
 
         private void Update()
         {
-            // WebGL & Desktop Keyboard shortcut support: Spacebar or Enter to Spin
+            // WebGL & Desktop Keyboard shortcut: Spacebar or Enter to Spin
             if (currentState == GameState.Idle && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)))
             {
                 RequestSpin();
             }
         }
 
+        private void EnsureComponents()
+        {
+            if (payoutManager == null) payoutManager = GetComponent<PayoutManager>();
+            if (payoutManager == null) payoutManager = gameObject.AddComponent<PayoutManager>();
+
+            if (outcomeGenerator == null) outcomeGenerator = GetComponent<RandomOutcomeGenerator>();
+            if (outcomeGenerator == null) outcomeGenerator = gameObject.AddComponent<RandomOutcomeGenerator>();
+
+            if (winningEvaluator == null) winningEvaluator = GetComponent<WinningEvaluator>();
+            if (winningEvaluator == null) winningEvaluator = gameObject.AddComponent<WinningEvaluator>();
+        }
+
         private void InitializeSubsystems()
         {
+            if (outcomeGenerator != null && symbolDatabase != null)
+            {
+                outcomeGenerator.Database = symbolDatabase;
+            }
+
+            if (payoutManager != null)
+            {
+                payoutManager.OnBalanceChanged += delegate(int bal) {
+                    if (uiManager != null) uiManager.UpdateBalance(bal);
+                };
+                payoutManager.OnBetChanged += delegate(int bet) {
+                    if (uiManager != null) uiManager.UpdateBet(bet);
+                };
+                payoutManager.OnInsufficientFunds += delegate {
+                    SetState(GameState.InsufficientFunds);
+                    if (uiManager != null) uiManager.DisplayMessage("Insufficient Credits! Please lower your bet.");
+                };
+            }
+
             if (uiManager != null)
             {
                 uiManager.OnSpinClicked += RequestSpin;
-                uiManager.OnIncreaseBetClicked += IncreaseBet;
-                uiManager.OnDecreaseBetClicked += DecreaseBet;
-                uiManager.OnMaxBetClicked += SetMaxBet;
-                uiManager.OnQuickBetSelected += SetBet;
+                uiManager.OnIncreaseBetClicked += delegate { if (payoutManager != null) payoutManager.IncreaseBet(); };
+                uiManager.OnDecreaseBetClicked += delegate { if (payoutManager != null) payoutManager.DecreaseBet(); };
+                uiManager.OnMaxBetClicked += delegate { if (payoutManager != null) payoutManager.SetMaxBet(); };
+                uiManager.OnQuickBetSelected += delegate(int b) { if (payoutManager != null) payoutManager.SetBet(b); };
+            }
+
+            if (slotMachine != null)
+            {
+                slotMachine.OnAllReelsStopped += HandleAllReelsStopped;
             }
 
             if (historyManager != null && uiManager != null && uiManager.HistoryUI != null)
@@ -95,84 +119,115 @@ namespace LuckySpin.SlotMachine.Core
             }
         }
 
+        /// <summary>
+        /// Begins a spin sequence: bet is deducted, outcome is generated by RNG, reels spin, and stop at predetermined symbols.
+        /// </summary>
         public void RequestSpin()
         {
             if (currentState != GameState.Idle) return;
 
-            if (balance < currentBet)
+            if (payoutManager == null || !payoutManager.HasSufficientCredits())
             {
                 SetState(GameState.InsufficientFunds);
-                if (uiManager != null)
-                {
-                    uiManager.DisplayMessage("Insufficient Credits! Lower bet or reset balance.");
-                }
+                if (uiManager != null) uiManager.DisplayMessage("Insufficient Credits! Lower bet or reset balance.");
                 return;
             }
 
-            // Deduct bet and begin spin cycle
-            balance -= currentBet;
-            if (OnBalanceChanged != null)
-            {
-                OnBalanceChanged(balance);
-            }
-            if (uiManager != null)
-            {
-                uiManager.UpdateBalance(balance);
-                uiManager.HideResultBanner();
-            }
+            // 1. Deduct bet from virtual currency balance
+            if (!payoutManager.TryDeductBet()) return;
 
+            // 2. Determine outcome via RNG BEFORE reel presentation begins
+            currentPredeterminedOutcomes = outcomeGenerator.GenerateOutcome(symbolDatabase);
+
+            // 3. Evaluate predetermined outcome (independent from visual presentation)
+            lastResult = winningEvaluator.Evaluate(currentPredeterminedOutcomes, payoutManager.CurrentBet);
+
+            // 4. Update UI and Audio for active spin state
             SetState(GameState.Spinning);
             if (uiManager != null)
             {
                 uiManager.SetSpinInteractable(false);
-                uiManager.UpdateStatus("SPINNING...", new Color(0.9f, 0.7f, 1f, 1f));
+                uiManager.HideResultBanner();
             }
             if (audioManager != null)
             {
                 audioManager.PlayButtonClick();
                 audioManager.StartSpinLoop();
             }
-        }
 
-        public void IncreaseBet()
-        {
-            if (currentState != GameState.Idle) return;
-            if (currentBet + betStep <= maxBet)
+            // 5. Trigger reel animation to stop on the predetermined symbols
+            if (slotMachine != null)
             {
-                currentBet += betStep;
-                OnBetUpdated();
+                slotMachine.SpinAll();
+                slotMachine.StopReels(currentPredeterminedOutcomes);
+            }
+            else
+            {
+                // Fallback if slot machine presentation is absent (e.g. headless)
+                HandleAllReelsStopped();
             }
         }
 
-        public void DecreaseBet()
+        private void HandleAllReelsStopped()
         {
-            if (currentState != GameState.Idle) return;
-            if (currentBet - betStep >= minBet)
+            if (audioManager != null)
             {
-                currentBet -= betStep;
-                OnBetUpdated();
+                audioManager.StopSpinLoop();
+                audioManager.PlayReelStop();
             }
-        }
 
-        public void SetMaxBet()
-        {
-            if (currentState != GameState.Idle) return;
-            currentBet = maxBet;
-            OnBetUpdated();
-        }
+            SetState(GameState.Evaluating);
 
-        public void SetBet(int amount)
-        {
-            if (currentState != GameState.Idle) return;
-            currentBet = Mathf.Clamp(amount, minBet, maxBet);
-            OnBetUpdated();
-        }
+            // Process payout and display results
+            if (lastResult.IsWin)
+            {
+                SetState(GameState.Payout);
+                if (payoutManager != null)
+                {
+                    payoutManager.AwardPayout(lastResult);
+                }
+                if (slotMachine != null)
+                {
+                    slotMachine.SetPaylineHighlights(true);
+                }
+                if (audioManager != null)
+                {
+                    audioManager.PlayWin();
+                    audioManager.PlayCoinPayout();
+                }
+                if (uiManager != null)
+                {
+                    string symName = lastResult.WinningSymbol != null ? lastResult.WinningSymbol.DisplayName : "MATCH";
+                    uiManager.ShowWinBanner(lastResult.Payout, symName);
+                }
+            }
+            else
+            {
+                if (uiManager != null)
+                {
+                    uiManager.ShowLossBanner();
+                }
+            }
 
-        private void OnBetUpdated()
-        {
-            if (audioManager != null) audioManager.PlayButtonClick();
-            if (OnBetChanged != null) OnBetChanged(currentBet);
-            if (uiManager != null) uiManager.UpdateBet(currentBet);
+            // Record spin into history
+            if (historyManager != null && currentPredeterminedOutcomes != null)
+            {
+                SymbolType[] types = new SymbolType[currentPredeterminedOutcomes.Length];
+                for (int i = 0; i < currentPredeterminedOutcomes.Length; i++)
+                {
+                    types[i] = currentPredeterminedOutcomes[i] != null ? currentPredeterminedOutcomes[i].Type : (SymbolType)(-1);
+                }
+                int bet = payoutManager != null ? payoutManager.CurrentBet : 10;
+                SpinRecord record = new SpinRecord(0, types, bet, lastResult.Payout, lastResult.IsWin);
+                historyManager.RecordSpin(record);
+            }
+
+            // Return to Idle ready for next spin
+            SetState(GameState.Idle);
+            if (uiManager != null)
+            {
+                uiManager.SetSpinInteractable(true);
+            }
         }
 
         private void SetState(GameState newState)
@@ -208,10 +263,10 @@ namespace LuckySpin.SlotMachine.Core
 
         private void UpdateUI()
         {
-            if (uiManager != null)
+            if (uiManager != null && payoutManager != null)
             {
-                uiManager.UpdateBalance(balance);
-                uiManager.UpdateBet(currentBet);
+                uiManager.UpdateBalance(payoutManager.CurrentBalance);
+                uiManager.UpdateBet(payoutManager.CurrentBet);
                 uiManager.SetSpinInteractable(currentState == GameState.Idle);
             }
         }
