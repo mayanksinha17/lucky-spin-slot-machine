@@ -17,3 +17,4 @@ MonoBehaviour:
   iconSprite: {fileID: 21300000, guid: 9992920d0f801718dd65d9971a2218ec, type: 3}
   payoutMultiplier: 25
   weight: 15
+

@@ -571,7 +571,8 @@ MonoBehaviour:
   - {fileID: 513}
   - {fileID: 523}
   - {fileID: 533}
-  stopDelayBetweenReels: 0.4
+  stopDelayBetweenReels: 0.35
+  symbolDatabase: {fileID: 11400000, guid: 5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d, type: 2}
 --- !u!1 &508
 GameObject:
   m_ObjectHideFlags: 0
@@ -763,8 +764,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   reelIndex: 0
   symbolContainer: {fileID: 511}
+  symbolItemPrefab: {fileID: 2000, guid: 4c3b2a1e0f9d8c7b6a5e4d3c2b1a0f9e, type: 3}
+  symbolWidth: 150
+  symbolHeight: 150
+  verticalPitch: 150
+  totalSlotCount: 5
+  symbolDatabase: {fileID: 11400000, guid: 5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d, type: 2}
   isSpinning: 0
-  currentVisibleSymbol: {fileID: 11400000, guid: 2cc905739b2df0df2363e09d6c269a05, type: 2}
+  currentPaylineSymbol: {fileID: 11400000, guid: b55a6acc10a92c68df6c4bff37a59bc5, type: 2}
+  symbolSlots: []
 --- !u!1 &520
 GameObject:
   m_ObjectHideFlags: 0
@@ -825,8 +833,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   reelIndex: 1
   symbolContainer: {fileID: 521}
+  symbolItemPrefab: {fileID: 2000, guid: 4c3b2a1e0f9d8c7b6a5e4d3c2b1a0f9e, type: 3}
+  symbolWidth: 150
+  symbolHeight: 150
+  verticalPitch: 150
+  totalSlotCount: 5
+  symbolDatabase: {fileID: 11400000, guid: 5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d, type: 2}
   isSpinning: 0
-  currentVisibleSymbol: {fileID: 11400000, guid: 2cc905739b2df0df2363e09d6c269a05, type: 2}
+  currentPaylineSymbol: {fileID: 11400000, guid: b55a6acc10a92c68df6c4bff37a59bc5, type: 2}
+  symbolSlots: []
 --- !u!1 &530
 GameObject:
   m_ObjectHideFlags: 0
@@ -887,8 +902,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   reelIndex: 2
   symbolContainer: {fileID: 531}
+  symbolItemPrefab: {fileID: 2000, guid: 4c3b2a1e0f9d8c7b6a5e4d3c2b1a0f9e, type: 3}
+  symbolWidth: 150
+  symbolHeight: 150
+  verticalPitch: 150
+  totalSlotCount: 5
+  symbolDatabase: {fileID: 11400000, guid: 5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d, type: 2}
   isSpinning: 0
-  currentVisibleSymbol: {fileID: 11400000, guid: 2cc905739b2df0df2363e09d6c269a05, type: 2}
+  currentPaylineSymbol: {fileID: 11400000, guid: b55a6acc10a92c68df6c4bff37a59bc5, type: 2}
+  symbolSlots: []
 --- !u!1 &600
 GameObject:
   m_ObjectHideFlags: 0

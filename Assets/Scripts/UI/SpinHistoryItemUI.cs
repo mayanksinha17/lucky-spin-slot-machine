@@ -59,3 +59,4 @@ namespace LuckySpin.SlotMachine.UI
         }
     }
 }
+
