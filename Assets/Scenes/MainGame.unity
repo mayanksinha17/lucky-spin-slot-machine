@@ -1042,6 +1042,7 @@ GameObject:
   m_Component:
   - component: {fileID: 701}
   - component: {fileID: 702}
+  - component: {fileID: 703}
   m_Layer: 5
   m_Name: UIManager
   m_TagString: Untagged
@@ -1101,6 +1102,23 @@ MonoBehaviour:
   paytableModal: {fileID: 1300}
   paytableOpenButton: {fileID: 844}
   paytableCloseButton: {fileID: 1314}
+  coinParticles: {fileID: 703}
+--- !u!114 &703
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4a2d815b3c749028919f91a56bc7402, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spawnParent: {fileID: 301}
+  coinSprite: {fileID: 0}
+  coinCount: 25
+  duration: 1.6
 --- !u!1 &810
 GameObject:
   m_ObjectHideFlags: 0

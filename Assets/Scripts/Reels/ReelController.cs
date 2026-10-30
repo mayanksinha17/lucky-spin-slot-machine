@@ -1,54 +1,74 @@
 #pragma warning disable 0649, 0169, 0414
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using LuckySpin.SlotMachine.Data;
+using LuckySpin.SlotMachine.Animations;
 
 namespace LuckySpin.SlotMachine.Reels
 {
+    public enum ReelSpinState
+    {
+        Idle = 0,
+        Accelerating = 1,
+        Spinning = 2,
+        Decelerating = 3,
+        Settling = 4
+    }
+
     /// <summary>
-    /// Reusable controller managing an individual slot reel, its symbol layout, alignment, and display state.
+    /// Professional slot reel controller with smooth acceleration, continuous wrap-around looping,
+    /// eased deceleration with mechanical bounce overshoot (EaseOutBack), and pixel-perfect final alignment.
     /// </summary>
     public class ReelController : MonoBehaviour
     {
-        [Header("Reel Configuration")]
-        [Tooltip("Zero-based index of this reel (0 = Left, 1 = Center, 2 = Right).")]
+        [Header("Reel Identification")]
         [SerializeField] private int reelIndex = 0;
-
-        [Tooltip("Container Transform holding the symbol slot items.")]
         [SerializeField] private RectTransform symbolContainer;
-
-        [Tooltip("Prefab instantiated for each symbol slot if not pre-assigned in scene.")]
         [SerializeField] private GameObject symbolItemPrefab;
 
-        [Header("Layout & Sizing Configuration")]
-        [Tooltip("Width of each symbol item.")]
+        [Header("Layout & Sizing")]
         [SerializeField] private float symbolWidth = 150f;
-
-        [Tooltip("Height of each symbol item.")]
         [SerializeField] private float symbolHeight = 150f;
-
-        [Tooltip("Vertical distance between adjacent symbol centers.")]
         [SerializeField] private float verticalPitch = 150f;
-
-        [Tooltip("Total slots instantiated per reel (e.g., 5: TopBuffer, Top, Center, Bottom, BottomBuffer).")]
         [SerializeField] private int totalSlotCount = 5;
+
+        [Header("Animation Dynamics")]
+        [Tooltip("Terminal spin speed in pixels per second.")]
+        [SerializeField] private float maxSpinSpeed = 1600f;
+
+        [Tooltip("Acceleration ramp duration in seconds.")]
+        [SerializeField] private float accelerationTime = 0.35f;
+
+        [Tooltip("Deceleration and settling duration in seconds.")]
+        [SerializeField] private float decelerationTime = 0.65f;
+
+        [Tooltip("Mechanical bounce overshoot magnitude in pixels.")]
+        [SerializeField] private float bounceOvershoot = 22f;
 
         [Header("Dependencies")]
         [SerializeField] private SymbolDatabase symbolDatabase;
 
         [Header("Runtime State")]
-        [SerializeField] private bool isSpinning = false;
+        [SerializeField] private ReelSpinState spinState = ReelSpinState.Idle;
+        [SerializeField] private float currentSpeed = 0f;
         [SerializeField] private SymbolData currentPaylineSymbol;
         [SerializeField] private SymbolItemView[] symbolSlots;
 
+        private Coroutine spinRoutine;
+        private Action stopCallback;
+
         public int ReelIndex { get { return reelIndex; } }
-        public bool IsSpinning { get { return isSpinning; } }
+        public bool IsSpinning { get { return spinState != ReelSpinState.Idle; } }
+        public ReelSpinState SpinState { get { return spinState; } }
         public SymbolData CurrentPaylineSymbol { get { return currentPaylineSymbol; } }
         public SymbolItemView[] SymbolSlots { get { return symbolSlots; } }
         public float VerticalPitch { get { return verticalPitch; } }
         public float SymbolHeight { get { return symbolHeight; } }
         public float SymbolWidth { get { return symbolWidth; } }
+        public float DecelerationTime { get { return decelerationTime; } set { decelerationTime = value; } }
+        public float AccelerationTime { get { return accelerationTime; } set { accelerationTime = value; } }
 
         public event Action<int> OnReelSpinStarted;
         public event Action<int, SymbolData> OnReelStopped;
@@ -67,9 +87,6 @@ namespace LuckySpin.SlotMachine.Reels
             ApplyLayoutAlignment();
         }
 
-        /// <summary>
-        /// Explicit initialization with index and symbol database.
-        /// </summary>
         public void Initialize(int index, SymbolDatabase db)
         {
             reelIndex = index;
@@ -78,21 +95,14 @@ namespace LuckySpin.SlotMachine.Reels
             ApplyLayoutAlignment();
         }
 
-        /// <summary>
-        /// Explicitly injects slot views (useful for procedural generation or testing).
-        /// </summary>
         public void SetSlots(SymbolItemView[] slots)
         {
             symbolSlots = slots;
             ApplyLayoutAlignment();
         }
 
-        /// <summary>
-        /// Ensures the array of SymbolItemView slots exists and is populated.
-        /// </summary>
         public void EnsureSlotsInitialized()
         {
-            // If already assigned in Inspector or children, grab them
             if (symbolSlots == null || symbolSlots.Length == 0)
             {
                 SymbolItemView[] children = GetComponentsInChildren<SymbolItemView>(true);
@@ -113,20 +123,15 @@ namespace LuckySpin.SlotMachine.Reels
             }
         }
 
-        /// <summary>
-        /// Aligns all symbol slots vertically with exact pitch and centering.
-        /// Center Payline is always at index 2 (y = 0).
-        /// </summary>
         public void ApplyLayoutAlignment()
         {
             if (symbolSlots == null || symbolSlots.Length == 0) return;
 
-            int centerIndex = symbolSlots.Length / 2; // e.g., index 2 for a 5-slot strip
+            int centerIndex = symbolSlots.Length / 2;
             for (int i = 0; i < symbolSlots.Length; i++)
             {
                 if (symbolSlots[i] != null)
                 {
-                    // Center slot at y = 0, slots above have positive y, slots below have negative y
                     float yPos = (centerIndex - i) * verticalPitch;
                     symbolSlots[i].SetSize(symbolWidth, symbolHeight);
                     symbolSlots[i].SetVerticalPosition(yPos);
@@ -134,9 +139,6 @@ namespace LuckySpin.SlotMachine.Reels
             }
         }
 
-        /// <summary>
-        /// Replaces a single symbol at the specified slot index.
-        /// </summary>
         public void ReplaceSymbol(int slotIndex, SymbolData newSymbol)
         {
             if (symbolSlots != null && slotIndex >= 0 && slotIndex < symbolSlots.Length)
@@ -146,7 +148,6 @@ namespace LuckySpin.SlotMachine.Reels
                     symbolSlots[slotIndex].SetSymbol(newSymbol);
                 }
 
-                // If replacing center payline slot, update tracking
                 int centerIndex = symbolSlots.Length / 2;
                 if (slotIndex == centerIndex)
                 {
@@ -155,9 +156,6 @@ namespace LuckySpin.SlotMachine.Reels
             }
         }
 
-        /// <summary>
-        /// Sets the 3 visible symbols on the reel (Top, Center Payline, Bottom).
-        /// </summary>
         public void SetVisibleSymbols(SymbolData top, SymbolData center, SymbolData bottom)
         {
             EnsureSlotsInitialized();
@@ -174,35 +172,16 @@ namespace LuckySpin.SlotMachine.Reels
             currentPaylineSymbol = center;
         }
 
-        /// <summary>
-        /// Sets only the center payline symbol and updates neighboring buffer symbols if database is available.
-        /// </summary>
         public void SetCenterPaylineSymbol(SymbolData centerSymbol)
         {
+            currentPaylineSymbol = centerSymbol;
             EnsureSlotsInitialized();
             if (symbolSlots == null || symbolSlots.Length == 0) return;
 
             int centerIndex = symbolSlots.Length / 2;
             ReplaceSymbol(centerIndex, centerSymbol);
-            currentPaylineSymbol = centerSymbol;
-
-            // Fill neighboring slots with diverse symbols if database present
-            if (symbolDatabase != null && symbolDatabase.Symbols != null && symbolDatabase.Symbols.Length > 0)
-            {
-                for (int i = 0; i < symbolSlots.Length; i++)
-                {
-                    if (i != centerIndex && symbolSlots[i] != null && symbolSlots[i].CurrentData == null)
-                    {
-                        SymbolData neighbor = symbolDatabase.GetRandomSymbol();
-                        symbolSlots[i].SetSymbol(neighbor);
-                    }
-                }
-            }
         }
 
-        /// <summary>
-        /// Highlights or unhighlights the center payline symbol.
-        /// </summary>
         public void SetPaylineHighlight(bool highlighted)
         {
             if (symbolSlots == null || symbolSlots.Length == 0) return;
@@ -214,30 +193,197 @@ namespace LuckySpin.SlotMachine.Reels
         }
 
         /// <summary>
-        /// Begins spinning animation loop.
+        /// Starts reel spinning with gradual acceleration.
         /// </summary>
         public void StartSpinning()
         {
-            isSpinning = true;
+            if (IsSpinning) return;
+
+            spinState = ReelSpinState.Accelerating;
             SetPaylineHighlight(false);
+            if (spinRoutine != null) StopCoroutine(spinRoutine);
+            spinRoutine = StartCoroutine(SpinRoutine());
+
             if (OnReelSpinStarted != null)
             {
                 OnReelSpinStarted(reelIndex);
             }
         }
 
+        private IEnumerator SpinRoutine()
+        {
+            spinState = ReelSpinState.Accelerating;
+            currentSpeed = 0f;
+            float elapsed = 0f;
+
+            // 1. Acceleration Phase (0 -> maxSpinSpeed)
+            while (elapsed < accelerationTime)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / accelerationTime);
+                currentSpeed = maxSpinSpeed * UIAnimationHelper.EaseInQuad(t);
+                ScrollSlots(currentSpeed * Time.deltaTime);
+                yield return null;
+            }
+
+            // 2. Full Speed Spinning Phase
+            spinState = ReelSpinState.Spinning;
+            currentSpeed = maxSpinSpeed;
+
+            while (spinState == ReelSpinState.Spinning)
+            {
+                ScrollSlots(currentSpeed * Time.deltaTime);
+                yield return null;
+            }
+        }
+
         /// <summary>
-        /// Stops the reel at the predetermined outcome symbol.
+        /// Moves all symbol slots downward and wraps them around when exiting the view aperture.
+        /// </summary>
+        public void ScrollSlots(float deltaDistance)
+        {
+            if (symbolSlots == null || symbolSlots.Length == 0) return;
+
+            int count = symbolSlots.Length;
+            float totalStripHeight = count * verticalPitch;
+            int centerIndex = count / 2;
+            float bottomLimit = -((count - centerIndex) * verticalPitch);
+
+            for (int i = 0; i < count; i++)
+            {
+                if (symbolSlots[i] == null) continue;
+
+                Vector2 pos = symbolSlots[i].RectTransform.anchoredPosition;
+                pos.y -= deltaDistance;
+
+                // Check wrap-around
+                if (pos.y < bottomLimit)
+                {
+                    pos.y += totalStripHeight;
+                    // Assign a new random symbol as it cycles to top
+                    if (symbolDatabase != null)
+                    {
+                        symbolSlots[i].SetSymbol(symbolDatabase.GetRandomSymbol());
+                    }
+                }
+
+                symbolSlots[i].RectTransform.anchoredPosition = pos;
+            }
+        }
+
+        /// <summary>
+        /// Initiates smooth deceleration and settles precisely on the predetermined target symbol with mechanical recoil.
         /// </summary>
         public void StopAt(SymbolData predeterminedOutcome, Action onComplete = null)
         {
             currentPaylineSymbol = predeterminedOutcome;
-            SetCenterPaylineSymbol(predeterminedOutcome);
-            isSpinning = false;
+            stopCallback = onComplete;
 
-            if (onComplete != null)
+            if (spinRoutine != null) StopCoroutine(spinRoutine);
+
+            if (decelerationTime <= 0f)
             {
-                onComplete();
+                StopImmediately(predeterminedOutcome, onComplete);
+                return;
+            }
+
+            spinRoutine = StartCoroutine(DecelerateRoutine(predeterminedOutcome));
+        }
+
+        /// <summary>
+        /// Instantly snaps the reel to the predetermined outcome, concluding any active spin.
+        /// </summary>
+        public void StopImmediately(SymbolData predeterminedOutcome, Action onComplete = null)
+        {
+            if (spinRoutine != null) StopCoroutine(spinRoutine);
+            spinRoutine = null;
+
+            currentPaylineSymbol = predeterminedOutcome;
+            SetCenterPaylineSymbol(predeterminedOutcome);
+            ApplyLayoutAlignment();
+
+            spinState = ReelSpinState.Idle;
+            currentSpeed = 0f;
+
+            if (onComplete != null) onComplete();
+            if (stopCallback != null)
+            {
+                Action cb = stopCallback;
+                stopCallback = null;
+                cb();
+            }
+
+            if (OnReelStopped != null)
+            {
+                OnReelStopped(reelIndex, currentPaylineSymbol);
+            }
+        }
+
+        private IEnumerator DecelerateRoutine(SymbolData targetOutcome)
+        {
+            spinState = ReelSpinState.Decelerating;
+            int count = symbolSlots != null ? symbolSlots.Length : 5;
+            int centerIndex = count / 2;
+
+            // Assign target outcome to center slot and ensure neighbors are populated
+            if (symbolSlots != null && centerIndex >= 0 && centerIndex < symbolSlots.Length)
+            {
+                SetCenterPaylineSymbol(targetOutcome);
+                if (symbolDatabase != null)
+                {
+                    for (int i = 0; i < symbolSlots.Length; i++)
+                    {
+                        if (i != centerIndex && symbolSlots[i] != null && symbolSlots[i].CurrentData == null)
+                        {
+                            symbolSlots[i].SetSymbol(symbolDatabase.GetRandomSymbol());
+                        }
+                    }
+                }
+            }
+
+            // Record initial slot offsets for smooth interpolation
+            float[] startY = new float[count];
+            float[] targetY = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                startY[i] = symbolSlots != null && symbolSlots[i] != null ? symbolSlots[i].RectTransform.anchoredPosition.y : 0f;
+                targetY[i] = (centerIndex - i) * verticalPitch;
+            }
+
+            float elapsed = 0f;
+            spinState = ReelSpinState.Settling;
+
+            while (elapsed < decelerationTime)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / decelerationTime);
+
+                // EaseOutBack creates physical bounce past target, then springs back
+                float curve = UIAnimationHelper.EaseOutBack(t, 1.3f);
+
+                for (int i = 0; i < count; i++)
+                {
+                    if (symbolSlots != null && symbolSlots[i] != null)
+                    {
+                        float currentY = Mathf.LerpUnclamped(startY[i], targetY[i], curve);
+                        symbolSlots[i].SetVerticalPosition(currentY);
+                    }
+                }
+
+                yield return null;
+            }
+
+            // Pixel-perfect snap to exact target coordinates
+            ApplyLayoutAlignment();
+            SetCenterPaylineSymbol(targetOutcome);
+
+            spinState = ReelSpinState.Idle;
+            currentSpeed = 0f;
+
+            if (stopCallback != null)
+            {
+                stopCallback();
+                stopCallback = null;
             }
 
             if (OnReelStopped != null)

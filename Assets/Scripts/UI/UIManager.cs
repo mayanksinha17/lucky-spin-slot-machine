@@ -1,14 +1,16 @@
 #pragma warning disable 0649, 0169, 0414
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using LuckySpin.SlotMachine.Core;
+using LuckySpin.SlotMachine.Animations;
 
 namespace LuckySpin.SlotMachine.UI
 {
     /// <summary>
-    /// Master UI manager controlling HUD balance, bet deck, spin button, result banners, status indicator, and history panel.
+    /// Master UI manager controlling HUD balance, bet deck, spin button, result banners, status indicator,
+    /// particle animations, and UI transitions.
     /// </summary>
     public class UIManager : MonoBehaviour
     {
@@ -20,6 +22,7 @@ namespace LuckySpin.SlotMachine.UI
 
         [Header("Primary Action Buttons")]
         [SerializeField] private Button spinButton;
+        [SerializeField] private RectTransform spinButtonRect;
         [SerializeField] private Button increaseBetButton;
         [SerializeField] private Button decreaseBetButton;
         [SerializeField] private Button maxBetButton;
@@ -31,9 +34,13 @@ namespace LuckySpin.SlotMachine.UI
 
         [Header("Result Notification Area")]
         [SerializeField] private GameObject resultBannerRoot;
+        [SerializeField] private RectTransform resultBannerRect;
         [SerializeField] private TextMeshProUGUI resultTitleText;
         [SerializeField] private TextMeshProUGUI resultPayoutText;
         [SerializeField] private Image resultBannerBg;
+
+        [Header("Visual Effects & Particles")]
+        [SerializeField] private CoinParticleController coinParticles;
 
         [Header("Spin History Section")]
         [SerializeField] private SpinHistoryUI spinHistoryUI;
@@ -41,6 +48,7 @@ namespace LuckySpin.SlotMachine.UI
 
         [Header("Paytable Modal")]
         [SerializeField] private GameObject paytableModal;
+        [SerializeField] private RectTransform paytableModalRect;
         [SerializeField] private Button paytableOpenButton;
         [SerializeField] private Button paytableCloseButton;
 
@@ -52,10 +60,26 @@ namespace LuckySpin.SlotMachine.UI
 
         private void Awake()
         {
-            // Spin Button
+            if (spinButtonRect == null && spinButton != null)
+            {
+                spinButtonRect = spinButton.GetComponent<RectTransform>();
+            }
+
+            if (resultBannerRoot != null && resultBannerRect == null)
+            {
+                resultBannerRect = resultBannerRoot.GetComponent<RectTransform>();
+            }
+
+            // Spin Button with punch animation feedback
             if (spinButton != null)
             {
-                spinButton.onClick.AddListener(delegate { if (OnSpinClicked != null) OnSpinClicked(); });
+                spinButton.onClick.AddListener(delegate {
+                    if (spinButtonRect != null)
+                    {
+                        StartCoroutine(UIAnimationHelper.PunchScaleRoutine(spinButtonRect, new Vector3(-0.15f, -0.15f, 0f), 0.22f));
+                    }
+                    if (OnSpinClicked != null) OnSpinClicked();
+                });
             }
 
             // Bet Adjusters
@@ -139,20 +163,35 @@ namespace LuckySpin.SlotMachine.UI
             if (bet100Button != null) bet100Button.interactable = interactable;
         }
 
+        /// <summary>
+        /// Displays celebratory win notification banner with pop-in animation, rollup counter, and coin particles.
+        /// </summary>
         public void ShowWinBanner(int amount, string symbol)
         {
             if (resultBannerRoot != null)
             {
                 resultBannerRoot.SetActive(true);
+                if (resultBannerRect != null)
+                {
+                    StartCoroutine(UIAnimationHelper.PopInRoutine(resultBannerRect, 0.45f));
+                }
             }
+
             if (resultTitleText != null)
             {
                 resultTitleText.text = string.Format("WINNER! 3x {0}", symbol.ToUpper());
                 resultTitleText.color = new Color(1f, 0.85f, 0.2f, 1f); // Vibrant gold
             }
+
             if (resultPayoutText != null)
             {
-                resultPayoutText.text = string.Format("+{0:N0} G", amount);
+                StartCoroutine(UIAnimationHelper.RollupTextRoutine(resultPayoutText, 0, amount, 0.65f, "+", " G"));
+            }
+
+            // Trigger coin fountain explosion
+            if (coinParticles != null)
+            {
+                coinParticles.PlayCoinFountain(Vector2.zero);
             }
         }
 
@@ -161,11 +200,15 @@ namespace LuckySpin.SlotMachine.UI
             if (resultBannerRoot != null)
             {
                 resultBannerRoot.SetActive(true);
+                if (resultBannerRect != null)
+                {
+                    StartCoroutine(UIAnimationHelper.PopInRoutine(resultBannerRect, 0.35f));
+                }
             }
             if (resultTitleText != null)
             {
                 resultTitleText.text = "NO MATCH";
-                resultTitleText.color = new Color(0.7f, 0.7f, 0.8f, 1f); // Subtle silver/blue
+                resultTitleText.color = new Color(0.7f, 0.7f, 0.8f, 1f);
             }
             if (resultPayoutText != null)
             {
@@ -188,7 +231,14 @@ namespace LuckySpin.SlotMachine.UI
 
         public void OpenPaytable()
         {
-            if (paytableModal != null) paytableModal.SetActive(true);
+            if (paytableModal != null)
+            {
+                paytableModal.SetActive(true);
+                if (paytableModalRect != null)
+                {
+                    StartCoroutine(UIAnimationHelper.PopInRoutine(paytableModalRect, 0.35f));
+                }
+            }
         }
 
         public void ClosePaytable()
@@ -197,5 +247,6 @@ namespace LuckySpin.SlotMachine.UI
         }
 
         public SpinHistoryUI HistoryUI { get { return spinHistoryUI; } }
+        public CoinParticleController CoinParticles { get { return coinParticles; } }
     }
 }

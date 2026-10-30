@@ -124,6 +124,7 @@ namespace LuckySpin.SlotMachine.Tests
             GameObject r0Obj = new GameObject("Reel0");
             ReelController reel0 = r0Obj.AddComponent<ReelController>();
             reel0.Initialize(0, null);
+            reel0.DecelerationTime = 0f;
 
             GameObject r1Obj = new GameObject("Reel1");
             ReelController reel1 = r1Obj.AddComponent<ReelController>();
@@ -187,6 +188,7 @@ namespace LuckySpin.SlotMachine.Tests
             GameObject reelObj = new GameObject("TestReel");
             ReelController reel = reelObj.AddComponent<ReelController>();
             reel.Initialize(0, null);
+            reel.DecelerationTime = 0f;
 
             SymbolData predeterminedSeven = ScriptableObject.CreateInstance<SymbolData>();
             predeterminedSeven.Initialize(SymbolType.Seven, "Seven", null, 25, 15);

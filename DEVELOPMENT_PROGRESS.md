@@ -19,8 +19,8 @@
 | **Phase 2** | Complete Slot Machine Interface & UI Pipeline | **Completed** | Full arcade cabinet, reels, HUD, controls, history drawer, and 5 symbols generated & verified |
 | **Phase 3** | Slot Machine Reel Architecture & Configuration | **Completed** | 3 independent reels, SymbolDatabase, sizing, alignment, prefabs, and test suite passing (5/5) |
 | **Phase 4** | Core Gameplay Engine (RNG, Evaluator, Payouts) | **Completed** | RNG generator, winning evaluator, payout manager, 13/13 total tests passing |
-| **Phase 5** | Reel Animation System & Motion Polish | **Next Up** | Ready for approval |
-| **Phase 6** | Audio System & Visual Effects (Particles/Glow) | Pending | - |
+| **Phase 5** | Reel Animation System & Motion Polish | **Completed** | Smooth acceleration, EaseOutBack deceleration, sequential stopping, UI punch/rollup/particles, 19/19 tests passing |
+| **Phase 6** | Audio System & Visual Effects (Particles/Glow) | **Next Up** | Ready for approval |
 | **Phase 7** | Bonus Features (Auto-spin, Win Streak, History) | Pending | - |
 | **Phase 8** | Integration & End-to-End Testing | Pending | - |
 | **Phase 9** | WebGL Build Pipeline & Local Server Delivery | Pending | - |
@@ -28,41 +28,42 @@
 
 ---
 
-### Phase 4 Execution Summary
+### Phase 5 Execution Summary
 
-#### 1. Components Implemented
-* [`RandomOutcomeGenerator.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/RandomOutcomeGenerator.cs):
-  * Generates 3 independent predetermined symbol outcomes before reel animations commence.
-  * Abstracted RNG via `IRandomProvider`:
-    * `UnityRandomProvider`: Standard `UnityEngine.Random` for production runtime randomness.
-    * `SeededRandomProvider`: Deterministic `System.Random` for unit tests and repeatable verification.
-  * Weighted probability distribution based on `SymbolData.Weight` (or uniform).
-  * Prevents hardcoded repeating sequences or predictable symbol cycles.
-* [`WinningEvaluator.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/WinningEvaluator.cs):
-  * Pure gameplay evaluation logic independent of view and animation systems.
-  * Mandatory winning logic: player wins if and only if **all three center payline symbols match**.
-  * Detects all 5 winning scenarios:
-    * 🍒 **Cherry** = 2x
-    * 🔔 **Bell** = 5x
-    * 🍫 **Double BAR** = 10x
-    * 7️⃣ **Lucky 7** = 25x
-    * 💎 **Diamond** = 100x (Jackpot)
-  * Detects all losing combinations:
-    * 2 matching + 1 different (e.g., Bell \| Bell \| Cherry) = Loss (0 payout)
-    * Split match (e.g., Seven \| BAR \| Seven) = Loss (0 payout)
-    * All 3 distinct (e.g., Cherry \| Diamond \| Bell) = Loss (0 payout)
-    * Null or incomplete symbol arrays = Loss (0 payout)
-* [`PayoutManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/PayoutManager.cs):
-  * Economy management: starting balance ($1,000\text{G}$), min bet ($10\text{G}$), max bet ($100\text{G}$), bet step ($10\text{G}$).
-  * Payout Formula: $\text{Payout} = \text{Bet Amount} \times \text{Symbol Multiplier}$.
-  * Validates sufficient credits prior to spinning; fires `OnInsufficientFunds` if balance is insufficient.
-  * Deducts bet on spin; awards and credits balance on win.
-* [`GameManager.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Core/GameManager.cs):
-  * Full orchestration: validates balance $\to$ deducts bet $\to$ generates predetermined outcome via RNG $\to$ evaluates win/loss $\to$ triggers reel spin $\to$ stops reels at predetermined result $\to$ distributes payout $\to$ updates HUD $\to$ records spin into history.
+#### 1. Reel Physics & Motion Dynamics
+* [`ReelController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Reels/ReelController.cs):
+  * **State Machine**: Explicit 5-state lifecycle (`Idle`, `Accelerating`, `Spinning`, `Decelerating`, `Settling`).
+  * **Smooth Acceleration**: Ramps from $0$ to terminal velocity ($1,600\text{px/sec}$) over $0.35\text{s}$ using `UIAnimationHelper.EaseInQuad(t)`.
+  * **Continuous Wrap-Around Scrolling**: Moves symbol slots downwards seamlessly. When a slot crosses the bottom boundary ($-300\text{px}$), it wraps around to the top ($+450\text{px}$) with a newly assigned random symbol from `SymbolDatabase`.
+  * **Mechanical Deceleration & Bounce Overshoot**: Eases to a stop over $0.65\text{s}$ using an authentic arcade `EaseOutBack(t, 1.3f)` curve. Slots overshoot past their resting coordinates by up to $22\text{px}$ before springing back into alignment.
+  * **Pixel-Perfect Alignment Guarantee**: At completion of deceleration, `ApplyLayoutAlignment()` snaps center payline slot to $y = 0\text{px}$, top slot to $y = +150\text{px}$, and bottom slot to $y = -150\text{px}$.
+
+#### 2. Staggered Sequential Reel Stopping
+* [`SlotMachineController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Gameplay/SlotMachineController.cs):
+  * **Base Spin Duration**: All reels spin at high speed for $1.2\text{s}$ to build excitement.
+  * **Sequential Staggered Stops**:
+    * **Reel 0 (Left)** stops at $t = 1.20\text{s}$.
+    * **Reel 1 (Center)** stops at $t = 1.58\text{s}$ ($+0.38\text{s}$ delay).
+    * **Reel 2 (Right)** stops at $t = 1.96\text{s}$ ($+0.38\text{s}$ delay).
+  * Synchronization event `OnAllReelsStopped` fires strictly after Reel 2 finishes its settling animation.
+
+#### 3. RNG & Presentation Decoupling Guarantee
+* **Pre-Determined Outcomes**: The RNG outcome is completely determined by `RandomOutcomeGenerator` *prior* to triggering reel animation in `GameManager.RequestSpin()`.
+* **Zero Alteration**: Reel presentation scripts only display the pre-calculated symbols. Reels cannot mutate, re-roll, or deviate from the predetermined outcome.
+* **Concurrent Spin Prevention**: `GameManager` validates that `currentState == GameState.Idle` before processing spins; `ReelController` guards `StartSpinning()` if `IsSpinning` is true; `UIManager` disables button interactivity during active spins.
+
+#### 4. UI Feedback & Particle Effects
+* [`UIAnimationHelper.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Animations/UIAnimationHelper.cs):
+  * `PunchScaleRoutine`: Damped harmonic elastic scaling for button click feedback.
+  * `PopInRoutine`: `EaseOutBack` pop-in effect ($0.0 \to 1.15 \to 1.0$) for win/loss result banners and modals.
+  * `RollupTextRoutine`: Smooth numerical rollup counter for winning credit payouts.
+* [`CoinParticleController.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Scripts/Animations/CoinParticleController.cs):
+  * Dynamic canvas particle fountain spawning 25 golden coins on every winning spin.
+  * Physical trajectory with gravity ($-1,400\text{px/s}^2$), random radial velocity, rotation spin, and alpha fadeout.
 
 ---
 
-### Automated Unit Test Results ([GameplayEngineTests.cs](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Tests/GameplayEngineTests.cs))
+### Automated Unit Test Results
 
 ```
 =================================================
@@ -87,19 +88,25 @@ Reel Tests: 5 | Passed: 5 | Failed: 0
 [PASS] RandomOutcomeGenerator_NoHardcodedSequences
 [PASS] RNGDecoupledFromVisualAnimation
 Gameplay Tests: 8 | Passed: 8 | Failed: 0
+
+[3] ANIMATION & MOTION DYNAMICS SUITE:
+[PASS] EaseInQuad_SmoothAccelerationCurve
+[PASS] EaseOutBack_MechanicalBounceOvershootAndSettle
+[PASS] ReelSequentialStoppingDelays_ConfiguredAccurately
+[PASS] AnimationNeverAltersPredeterminedOutcome
+[PASS] ConcurrentSpinsPreventedDuringActiveAnimation
+[PASS] ReelSettlingSnapsToPixelPerfectAlignment
+Animation Tests: 6 | Passed: 6 | Failed: 0
 =================================================
-GRAND TOTAL: 13 Tests | Passed: 13 | Failed: 0 (100% Pass Rate)
+GRAND TOTAL: 19 Tests | Passed: 19 | Failed: 0 (100% Pass Rate)
 =================================================
 ```
 
-* **Git Commit**: `418a895: feat(gameplay): Implement RNG outcome generator, winning evaluator, payout manager, and comprehensive test suite`.
-
 ---
 
-### Next Phase: Phase 5 (Reel Animation System & Motion Polish)
-Objectives for Phase 5:
-1. Implement smooth acceleration curve from rest to high-speed reel spin.
-2. Implement seamless vertical wrap-around symbol scrolling.
-3. Implement eased deceleration (`EaseOutBack` / spring-loaded mechanical overshoot) landing on the predetermined outcome.
-4. Implement sequential reel stopping with configurable delays between reels (Left $\to$ Center $\to$ Right).
-5. Add visual spin blur / speed lines feedback.
+### Next Phase: Phase 6 (Audio System & Visual Effects Polish)
+Objectives for Phase 6:
+1. Wire all audio clips (`button_click.wav`, `spin_loop.wav`, `reel_stop.wav`, `win_chime.wav`, `coin_payout.wav`) to gameplay lifecycle events.
+2. Implement reel stop audio synchronization for each individual reel.
+3. Implement winning payline flashing marquee lights and glow effect.
+4. Provide audio volume toggle and mute controls on the cabinet HUD.
