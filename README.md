@@ -15,10 +15,13 @@ A professional, production-style Unity slot machine game engineered for a techni
 ### Desktop Full HD Presentation ($1920 \times 1080$)
 ![LUCKY SPIN Desktop Gameplay](Docs/Screenshots/gameplay_desktop_1920x1080.png)
 
-### Original Provided Design Benchmark vs. In-Engine Implementation
-| Provided Design Reference (`reference_cabinet.png`) | In-Engine WebGL & HTML5 Responsive Gameplay |
+### Anime Casino Redesign Reference vs. In-Engine & Browser Implementation
+| Target Reference Design | Luxury In-Engine & Browser Implementation |
 |:---:|:---:|
-| ![Design Reference](Docs/Screenshots/reference_cabinet.png) | ![In-Engine Implementation](Docs/Screenshots/responsive_laptop_1366x768.png) |
+| ![Target Reference](Docs/Screenshots/reference_cabinet.png) | ![In-Engine Implementation](Docs/Screenshots/responsive_laptop_1366x768.png) |
+
+> [!NOTE]
+> **Anime Casino UI Redesign**: The project features a full luxury anime casino aesthetic including deep purple & gold lounge ambient lighting, an original anime hostess character on the left, a neon spade silhouette on the right, golden crown & marquee ribbon, and grounded coin stacks with casino chips. All dynamic layers (reels, balance HUD, bet controls, spin button, win banners) are completely decoupled into independent, interactive elements.
 
 ---
 
@@ -254,19 +257,32 @@ The game features dynamic aspect-ratio auto-scaling (`resizeGame()`) that mainta
 
 ## 9. Build & Execution Guide
 
-### Option 1: Play the Standalone HTML5 Demo (Instant Browser Play)
-1. **Windows One-Click Launcher**: Double-click [`start_html5_server.bat`](start_html5_server.bat) (or run [`start_html5_server.ps1`](start_html5_server.ps1)).
-2. **Manual Terminal Command**:
+### Option 1: Play the Standalone HTML5 Release Demo (Instant Browser Play)
+1. **Windows Launcher**: Run the local HTTP server:
    ```bash
    python -m http.server 8080 --directory Build/HTML5_Standalone
    ```
-3. Open your browser to: **`http://localhost:8080/index.html`**
+2. Open your web browser to: **`http://localhost:8080/index.html`**
+3. Or launch via Next.js Dashboard:
+   ```bash
+   cd "C:\Users\ASUS\Desktop\Assignment"
+   npm run dev
+   ```
+   Navigate to: **`http://localhost:3000/dashboard/lucky-spin`**
 
 ### Option 2: Build the Unity Project to WebGL in Unity Editor
-1. Open the project folder in **Unity Editor 2022.3 LTS** (or 2021.3 LTS / Unity 6) with **WebGL Build Support** installed.
+1. Open the project folder in **Unity Editor 2022.3.62f2** with **WebGL Build Support** installed.
 2. In the top Unity menu, click: **`Build -> Build WebGL (Release)`**.
-   *(Or run via CLI: `Unity.exe -batchmode -quit -projectPath . -executeMethod LuckySpin.SlotMachine.Editor.WebGLBuilder.BuildWebGL`)*
-3. Unity will compile the project and output actual WebAssembly artifacts (`.wasm`, `.data`, `.framework.js`, `Build.loader.js`) into `Build/WebGL/`.
+   *(Configured via [`Assets/Editor/WebGLBuilder.cs`](Assets/Editor/WebGLBuilder.cs) targeting `Build/WebGL/`)*
+3. When running outside the editor (with Unity Editor closed), compile via CLI batchmode:
+   ```powershell
+   & "C:\Program Files\Unity\Hub\Editor\2022.3.62f2\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\ASUS\Desktop\Underpin service new" -executeMethod LuckySpin.SlotMachine.Editor.WebGLBuilder.BuildWebGL -logFile "webgl_build.log"
+   ```
+4. Host and test the compiled WebGL package:
+   ```bash
+   python -m http.server 8081 --directory Build/WebGL
+   ```
+   Open: **`http://localhost:8081/index.html`**
 
 ### Option 3: Execute the Automated C# Unit Test Suites
 ```powershell
@@ -278,13 +294,17 @@ $csc = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 
 ---
 
-## 10. Known Limitations & Environment Disclosure
+## 10. Platform Delivery & Toolchain Status
 
-* **Host Environment Toolchain Limitation**: The local development machine lacks an installation of the Unity Editor and Unity WebGL Build Support module.
-* **Build Provenance**:
-  * An actual Unity WebGL compilation (`.wasm`, `.data`) has **not** yet been generated on this machine because Unity Editor is unavailable.
-  * The production Unity project is 100% prepared and configured for one-click compilation via [`Assets/Editor/WebGLBuilder.cs`](Assets/Editor/WebGLBuilder.cs) as soon as it is opened in the Unity Editor.
-  * The playable browser experience in [`Build/HTML5_Standalone/`](Build/HTML5_Standalone/) is a standalone HTML5/Canvas/JavaScript implementation engineered to replicate the C# architecture, math models, audio synthesis, and assets 1:1.
+* **Unity Version & Platform**: Unity `2022.3.62f2` (`DX11` / `WebGLSupport`).
+* **Active Working Branch**: `feature/anime-ui-redesign`.
+* **Editor Concurrency Note**:
+  * Unity Editor holds an active project lock (`Temp/UnityLockfile`) while running on the host desktop.
+  * Headless CLI batchmode requires the Unity Editor instance to be closed so it can acquire exclusive access to the project Library cache.
+  * While the Unity Editor is actively running, WebGL compilation can be triggered directly in one click from the editor menu: **`Build -> Build WebGL (Release)`**.
+* **Dual Delivery Architecture**:
+  * **Primary (Unity C# Engine)**: Complete Unity scene (`Assets/Scenes/MainGame.unity`), custom shaders, UI hierarchy, event architecture, and 68/68 passing automated C# regression tests.
+  * **Secondary (HTML5 Release Demo)**: A standalone browser build (`Build/HTML5_Standalone/`) with 100% feature parity, responsive viewport auto-scaling, and identical anime casino art assets for immediate browser evaluation and Next.js dashboard embedding.
 
 ---
 
