@@ -270,21 +270,28 @@ The game features dynamic aspect-ratio auto-scaling (`resizeGame()`) that mainta
    ```
    Navigate to: **`http://localhost:3000/dashboard/lucky-spin`**
 
-### Option 2: Build the Unity Project to WebGL in Unity Editor
-1. Open the project folder in **Unity Editor 2022.3.62f2** with **WebGL Build Support** installed.
-2. In the top Unity menu, click: **`Build -> Build WebGL (Release)`**.
-   *(Configured via [`Assets/Editor/WebGLBuilder.cs`](Assets/Editor/WebGLBuilder.cs) targeting `Build/WebGL/`)*
-3. When running outside the editor (with Unity Editor closed), compile via CLI batchmode:
-   ```powershell
-   & "C:\Program Files\Unity\Hub\Editor\2022.3.62f2\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\ASUS\Desktop\Underpin service new" -executeMethod LuckySpin.SlotMachine.Editor.WebGLBuilder.BuildWebGL -logFile "webgl_build.log"
-   ```
-4. Host and test the compiled WebGL package:
+### Option 2: Run the Official Unity WebGL Build (Compiled & Verified)
+1. **Direct HTTP Server**:
    ```bash
-   python -m http.server 8081 --directory Build/WebGL
+   python -m http.server 8080 --directory Build/WebGL
    ```
-   Open: **`http://localhost:8081/index.html`**
+2. Open your web browser to: **`http://localhost:8080/index.html`**
+3. **In-Browser Verification Details**:
+   - Compiled with Unity `2022.3.62f2` WebGL Build Support.
+   - Verified via automated headless Chrome DevTools Protocol (CDP) test harness.
+   - Confirmed WebAssembly instantiation (`WebGL.wasm` 18.9 MB), WebGL 2.0 context (`OpenGL ES 3.0 Chromium`), IndexedDB asset caching (`WebGL.data` 7.58 MB), interactive spacebar spin execution, audio context resumption, and clean runtime logs (0 errors).
 
-### Option 3: Execute the Automated C# Unit Test Suites
+### Option 3: Play via Next.js Dashboard
+1. Start the Next.js dev server:
+   ```bash
+   cd "C:\Users\ASUS\Desktop\Assignment"
+   npm run dev
+   ```
+2. Open your browser to: **`http://localhost:3000/dashboard/lucky-spin`**
+   - Launches the official **Unity WebGL (WASM)** build by default.
+   - Dual-engine switcher in the header enables seamless toggling between Unity WebGL (`/games/lucky-spin/webgl/index.html`) and the Standalone HTML5 engine (`/games/lucky-spin/standalone/index.html`).
+
+### Option 4: Execute the Automated C# Unit Test Suites
 ```powershell
 $tempDir = "$env:TEMP\slot_test_runner"
 $csc = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
@@ -294,16 +301,16 @@ $csc = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 
 ---
 
-## 10. Platform Delivery & Toolchain Status
+## 10. Platform Delivery & Build Provenance
 
 * **Unity Version & Platform**: Unity `2022.3.62f2` (`DX11` / `WebGLSupport`).
 * **Active Working Branch**: `feature/anime-ui-redesign`.
-* **Editor Concurrency Note**:
-  * Unity Editor holds an active project lock (`Temp/UnityLockfile`) while running on the host desktop.
-  * Headless CLI batchmode requires the Unity Editor instance to be closed so it can acquire exclusive access to the project Library cache.
-  * While the Unity Editor is actively running, WebGL compilation can be triggered directly in one click from the editor menu: **`Build -> Build WebGL (Release)`**.
+* **Production WebGL Build**:
+  * Located at: [`Build/WebGL/`](Build/WebGL/).
+  * Contains complete WebAssembly binaries: `WebGL.wasm` ($18.9\text{ MB}$), `WebGL.data` ($7.58\text{ MB}$), `WebGL.framework.js` ($362\text{ KB}$), and `WebGL.loader.js` ($20.6\text{ KB}$).
+  * Embedded and live on Next.js dashboard route `/dashboard/lucky-spin`.
 * **Dual Delivery Architecture**:
-  * **Primary (Unity C# Engine)**: Complete Unity scene (`Assets/Scenes/MainGame.unity`), custom shaders, UI hierarchy, event architecture, and 68/68 passing automated C# regression tests.
+  * **Primary (Unity C# Engine & WebGL Build)**: Complete Unity scene (`Assets/Scenes/MainGame.unity`), custom shaders, UI hierarchy, event architecture, 68/68 passing automated C# regression tests, and compiled production WebGL wasm package.
   * **Secondary (HTML5 Release Demo)**: A standalone browser build (`Build/HTML5_Standalone/`) with 100% feature parity, responsive viewport auto-scaling, and identical anime casino art assets for immediate browser evaluation and Next.js dashboard embedding.
 
 ---

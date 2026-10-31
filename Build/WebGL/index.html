@@ -1,98 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUCKY SPIN – Unity WebGL Pipeline Status</title>
-    <style>
-        body {
-            background: #0d081a;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .container {
-            max-width: 720px;
-            background: #190f33;
-            border: 3px solid #f6b800;
-            border-radius: 16px;
-            padding: 36px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-            text-align: center;
-        }
-        h1 {
-            color: #ffd700;
-            margin-top: 0;
-            font-size: 28px;
-        }
-        .badge {
-            display: inline-block;
-            background: #e67300;
-            color: #fff;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-        p {
-            line-height: 1.6;
-            color: #d1c4e9;
-            font-size: 16px;
-        }
-        .code-box {
-            background: #090414;
-            border: 1px solid #482a7a;
-            border-radius: 8px;
-            padding: 12px;
-            font-family: monospace;
-            font-size: 13px;
-            color: #00ffaa;
-            text-align: left;
-            margin: 20px 0;
-            overflow-x: auto;
-        }
-        .btn-play {
-            display: inline-block;
-            background: linear-gradient(180deg, #ffbc00 0%, #e67300 100%);
-            border: 2px solid #fff2a8;
-            color: #3d1400;
-            font-size: 18px;
-            font-weight: bold;
-            padding: 14px 32px;
-            border-radius: 30px;
-            text-decoration: none;
-            box-shadow: 0 4px 15px rgba(255, 180, 0, 0.4);
-            transition: 0.2s;
-            margin-top: 10px;
-        }
-        .btn-play:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 180, 0, 0.6);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>LUCKY SPIN – Ultimate Slot Machine</h1>
-        <div class="badge">Unity WebGL Pipeline Status: PENDING COMPILATION</div>
-        <p>
-            The Unity project configuration, scenes, and automated build script (<code>Assets/Editor/WebGLBuilder.cs</code>) are fully prepared and verified. However, because Unity Editor is not installed on the current host machine, the actual compiled WebAssembly artifacts (<code>.wasm</code>, <code>.data</code>, <code>.framework.js</code>) have not yet been generated.
-        </p>
-        <div class="code-box">
-            // Unity Editor One-Click Build Command:<br>
-            Unity.exe -batchmode -quit -projectPath . -executeMethod LuckySpin.SlotMachine.Editor.WebGLBuilder.BuildWebGL
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | LUCKY SPIN – Ultimate Slot Machine</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
         </div>
-        <p>
-            A complete, fully verified <strong>Standalone HTML5 / JavaScript playable implementation</strong> mirroring the C# architecture 1:1 is available and ready to play:
-        </p>
-        <a href="../HTML5_Standalone/index.html" class="btn-play">▶ Launch Standalone HTML5 Demo</a>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">LUCKY SPIN – Ultimate Slot Machine</div>
+      </div>
     </div>
-</body>
+    <script>
+
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebGL.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/WebGL.data",
+        frameworkUrl: buildUrl + "/WebGL.framework.js",
+        codeUrl: buildUrl + "/WebGL.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "Underpin",
+        productName: "LUCKY SPIN – Ultimate Slot Machine",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+      };
+
+      // By default, Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
+
+      // If you would like all file writes inside Unity Application.persistentDataPath
+      // directory to automatically persist so that the contents are remembered when
+      // the user revisits the site the next time, uncomment the following line:
+      // config.autoSyncPersistentDataPath = true;
+      // This autosyncing is currently not the default behavior to avoid regressing
+      // existing user projects that might rely on the earlier manual
+      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
+      // expected to change.
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        container.className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
+
+
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+
+        canvas.style.width = "1920px";
+        canvas.style.height = "1080px";
+      }
+
+      loadingBar.style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          progressBarFull.style.width = 100 * progress + "%";
+              }).then((unityInstance) => {
+                loadingBar.style.display = "none";
+                fullscreenButton.onclick = () => {
+                  unityInstance.SetFullscreen(1);
+                };
+              }).catch((message) => {
+                alert(message);
+              });
+            };
+
+      document.body.appendChild(script);
+
+    </script>
+  </body>
 </html>
