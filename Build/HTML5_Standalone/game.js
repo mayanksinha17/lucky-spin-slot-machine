@@ -558,7 +558,7 @@ class GameManager {
                 this.showBanner(this.lastResult.symbol.name.toUpperCase() + ' MATCH!', msg);
             }
         } else {
-            this.showBanner('NO MATCH', 'Try again!');
+            this.showBanner('NO MATCH', 'TRY AGAIN!');
         }
 
         // Auto adjust bet if credits lower than current bet
@@ -635,8 +635,18 @@ class GameManager {
     }
 
     updateUI() {
-        document.getElementById('balance-display').textContent = this.payoutManager.currentBalance + ' G';
-        document.getElementById('bet-display').textContent = this.payoutManager.currentBet + ' G';
+        const balEl = document.getElementById('balance-display');
+        if (balEl) balEl.textContent = this.payoutManager.currentBalance.toLocaleString() + ' G';
+        const betEl = document.getElementById('bet-display');
+        if (betEl) betEl.textContent = 'BET ' + this.payoutManager.currentBet + ' G';
+
+        const statusEl = document.getElementById('status-text');
+        if (statusEl) {
+            if (this.state === 'Spinning') statusEl.textContent = 'SPINNING...';
+            else if (this.state === 'Evaluating') statusEl.textContent = 'EVALUATING...';
+            else if (this.state === 'InsufficientFunds') statusEl.textContent = 'INSUFFICIENT CREDITS';
+            else statusEl.textContent = 'READY TO SPIN';
+        }
 
         const isSpinning = this.state !== 'Idle';
         document.getElementById('btn-spin').disabled = isSpinning;
@@ -698,9 +708,9 @@ class GameManager {
 function resizeGame() {
     const container = document.getElementById('game-container');
     if (!container) return;
-    const baseW = 1280;
-    const baseH = 720;
-    const scale = Math.min(window.innerWidth / baseW, window.innerHeight / baseH, 1.0);
+    const baseW = 1920;
+    const baseH = 1080;
+    const scale = Math.min(window.innerWidth / baseW, window.innerHeight / baseH);
     container.style.transform = `scale(${scale})`;
     container.style.transformOrigin = 'center center';
 }
