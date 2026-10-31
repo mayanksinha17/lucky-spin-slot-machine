@@ -36,7 +36,7 @@ PlayerSettings:
   m_ActiveColorSpace: 1
   stripEngineCode: 1
   runInBackground: 1
-  WebGLCompressionFormat: 1
+  WebGLCompressionFormat: 0
   WebGLTemplate: APPLICATION:Default
   webGLMemorySize: 256
 
