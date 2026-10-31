@@ -1,10 +1,14 @@
 # LUCKY SPIN – Ultimate Slot Machine
 
 [![Unity Version](https://img.shields.io/badge/Unity-2022.3%20LTS-blue.svg)](https://unity.com/)
+[![Live Playable WebGL](https://img.shields.io/badge/%F0%9F%8E%AE%20Play%20Live%20WebGL-GitHub%20Pages-brightgreen.svg)](https://mayanksinha17.github.io/lucky-spin-slot-machine/)
 [![WebGL Support](https://img.shields.io/badge/Platform-WebGL%20%7C%20HTML5%20%7C%20Desktop-orange.svg)]()
 [![C# Unit Tests](https://img.shields.io/badge/C%23%20Unit%20Tests-68%2F68%20Passed%20(100%25)-brightgreen.svg)]()
 [![Browser Tests](https://img.shields.io/badge/In--Browser%20Tests-35%2F35%20Passed%20(100%25)-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
+
+> 🎮 **Live WebGL Playable Game**: **[https://mayanksinha17.github.io/lucky-spin-slot-machine/](https://mayanksinha17.github.io/lucky-spin-slot-machine/)**  
+> Deployed on GitHub Pages with responsive 16:9 auto-scaling. Verified across Full HD Desktop ( \times 1080$) and Standard Laptop ( \times 768$) viewports with zero horizontal/vertical overflow or cropping.
 
 A professional, production-style Unity slot machine game engineered for a technical evaluation/internship assignment. Built with clean object-oriented C# architecture, mathematical rigor, deterministic random outcome generation decoupled from visual presentation, arcade-accurate reel motion curves, centralized virtual credits with transaction locking, synthesized multi-channel audio, and modular bonus systems (Auto-Spin, Win Streaks, Wild substitutions, and Jackpot celebrations).
 
@@ -256,6 +260,11 @@ The game features dynamic aspect-ratio auto-scaling (`resizeGame()`) that mainta
 ---
 
 ## 9. Build & Execution Guide
+
+### Option 0: Play Live on GitHub Pages (No Install Needed)
+* **Playable Live URL**: **[https://mayanksinha17.github.io/lucky-spin-slot-machine/](https://mayanksinha17.github.io/lucky-spin-slot-machine/)**
+* Deployed via dedicated gh-pages branch with zero-overflow responsive 16:9 viewport scaling.
+* Features WebAssembly execution, audio synthesis, and interactive controls in any modern desktop or laptop browser.
 
 ### Option 1: Play the Standalone HTML5 Release Demo (Instant Browser Play)
 1. **Windows Launcher**: Run the local HTTP server:
