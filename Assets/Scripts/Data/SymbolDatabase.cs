@@ -15,6 +15,14 @@ namespace LuckySpin.SlotMachine.Data
         [SerializeField] private SymbolData[] symbols;
 
         public SymbolData[] Symbols { get { return symbols; } }
+        public int Count { get { return symbols != null ? symbols.Length : 0; } }
+
+        public SymbolData GetSymbol(int index)
+        {
+            if (symbols == null || symbols.Length == 0) return null;
+            int wrapped = ((index % symbols.Length) + symbols.Length) % symbols.Length;
+            return symbols[wrapped];
+        }
 
         public SymbolData GetSymbol(SymbolType type)
         {

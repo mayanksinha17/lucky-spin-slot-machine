@@ -84,7 +84,9 @@ namespace LuckySpin.SlotMachine.Reels
 
         private void Start()
         {
+            EnsureSlotsInitialized();
             ApplyLayoutAlignment();
+            PopulateInitialSymbols();
         }
 
         public void Initialize(int index, SymbolDatabase db)
@@ -93,6 +95,35 @@ namespace LuckySpin.SlotMachine.Reels
             symbolDatabase = db;
             EnsureSlotsInitialized();
             ApplyLayoutAlignment();
+            PopulateInitialSymbols();
+        }
+
+        public void PopulateInitialSymbols()
+        {
+            if (symbolSlots == null || symbolSlots.Length == 0) return;
+
+            int centerIndex = symbolSlots.Length / 2;
+            for (int i = 0; i < symbolSlots.Length; i++)
+            {
+                if (symbolSlots[i] == null) continue;
+                if (symbolSlots[i].CurrentData == null)
+                {
+                    if (i == centerIndex && currentPaylineSymbol != null)
+                    {
+                        symbolSlots[i].SetSymbol(currentPaylineSymbol);
+                    }
+                    else if (symbolDatabase != null && symbolDatabase.Count > 0)
+                    {
+                        int symIdx = (reelIndex * 2 + i) % symbolDatabase.Count;
+                        symbolSlots[i].SetSymbol(symbolDatabase.GetSymbol(symIdx));
+                    }
+                }
+            }
+
+            if (currentPaylineSymbol == null && symbolSlots[centerIndex] != null && symbolSlots[centerIndex].CurrentData != null)
+            {
+                currentPaylineSymbol = symbolSlots[centerIndex].CurrentData;
+            }
         }
 
         public void SetSlots(SymbolItemView[] slots)
