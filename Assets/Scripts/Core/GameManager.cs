@@ -86,6 +86,15 @@ namespace LuckySpin.SlotMachine.Core
 
             if (winningEvaluator == null) winningEvaluator = GetComponent<WinningEvaluator>();
             if (winningEvaluator == null) winningEvaluator = gameObject.AddComponent<WinningEvaluator>();
+
+            if (autoSpinController == null) autoSpinController = GetComponent<AutoSpinController>();
+            if (autoSpinController == null) autoSpinController = gameObject.AddComponent<AutoSpinController>();
+
+            if (jackpotCelebration == null) jackpotCelebration = GetComponent<JackpotCelebrationController>();
+            if (jackpotCelebration == null) jackpotCelebration = gameObject.AddComponent<JackpotCelebrationController>();
+
+            if (winStreakTracker == null) winStreakTracker = GetComponent<WinStreakTracker>();
+            if (winStreakTracker == null) winStreakTracker = gameObject.AddComponent<WinStreakTracker>();
         }
 
         private void InitializeSubsystems()
@@ -164,11 +173,52 @@ namespace LuckySpin.SlotMachine.Core
             if (autoSpinController != null)
             {
                 autoSpinController.Initialize(this, payoutManager);
+
+                // Wire auto-spin events to UIManager display updates
+                if (uiManager != null)
+                {
+                    uiManager.OnAutoSpinClicked += delegate
+                    {
+                        if (autoSpinController.IsActive)
+                        {
+                            autoSpinController.StopAutoSpin(Bonus.AutoSpinStopReason.UserCancelled);
+                        }
+                        else if (currentState == GameState.Idle)
+                        {
+                            autoSpinController.StartAutoSpin(10); // default 10 auto-spins
+                        }
+                    };
+                    autoSpinController.OnAutoSpinCountUpdated += delegate(int remaining)
+                    {
+                        if (uiManager != null) uiManager.UpdateAutoSpinDisplay(autoSpinController.IsActive, remaining);
+                    };
+                    autoSpinController.OnAutoSpinStopped += delegate(Bonus.AutoSpinStopReason reason)
+                    {
+                        if (uiManager != null) uiManager.UpdateAutoSpinDisplay(false, 0);
+                    };
+                }
+            }
+
+            // Wire mute toggle
+            if (uiManager != null && audioManager != null)
+            {
+                uiManager.OnMuteClicked += delegate
+                {
+                    audioManager.ToggleMute();
+                    if (uiManager != null) uiManager.UpdateMuteDisplay(audioManager.IsMuted);
+                };
+                // Sync initial mute display state
+                uiManager.UpdateMuteDisplay(audioManager.IsMuted);
             }
 
             if (winStreakTracker != null)
             {
                 winStreakTracker.Initialize(audioManager);
+            }
+
+            if (jackpotCelebration != null)
+            {
+                jackpotCelebration.Initialize(audioManager, uiManager != null ? uiManager.CoinParticles : null);
             }
         }
 

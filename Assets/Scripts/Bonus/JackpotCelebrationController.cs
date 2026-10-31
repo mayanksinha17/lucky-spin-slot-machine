@@ -40,6 +40,12 @@ namespace LuckySpin.SlotMachine.Bonus
         public event Action<int> OnJackpotTriggered;
         public event Action OnJackpotDismissed;
 
+        public void Initialize(AudioManager am = null, CoinParticleController pc = null)
+        {
+            if (am != null) audioManager = am;
+            if (pc != null) particleController = pc;
+        }
+
         private void Awake()
         {
             if (dismissButton != null)
