@@ -278,7 +278,7 @@ namespace LuckySpin.SlotMachine.Gameplay
         }
 
         /// <summary>
-        /// Adjusts bet amount within [minBet, maxBet] limits, snapped to bet step.
+        /// Adjusts bet amount within [minBet, maxBet] limits, snapped to bet step, capped to available balance.
         /// </summary>
         public bool SetBet(int newBet)
         {
@@ -294,6 +294,17 @@ namespace LuckySpin.SlotMachine.Gameplay
             }
             clamped = Mathf.Clamp(clamped, minBet, maxBet);
 
+            // Cap bet to available balance if balance allows at least minBet
+            if (clamped > currentBalance && currentBalance >= minBet)
+            {
+                int affordableSteps = (currentBalance - minBet) / betStep;
+                clamped = minBet + (affordableSteps * betStep);
+            }
+            else if (currentBalance < minBet)
+            {
+                clamped = minBet;
+            }
+
             if (clamped != currentBet)
             {
                 currentBet = clamped;
@@ -303,15 +314,30 @@ namespace LuckySpin.SlotMachine.Gameplay
                 }
                 return true;
             }
+            else
+            {
+                // Refresh UI even if value didn't change so preset highlights stay synchronized
+                if (OnBetChanged != null)
+                {
+                    OnBetChanged(currentBet);
+                }
+            }
             return false;
         }
 
         public bool IncreaseBet()
         {
             if (HasActiveTransaction) return false;
-            if (currentBet + betStep <= maxBet)
+            int target = currentBet + betStep;
+            if (target > maxBet) target = maxBet;
+            if (target > currentBalance && currentBalance >= minBet)
             {
-                return SetBet(currentBet + betStep);
+                int affordableSteps = (currentBalance - minBet) / betStep;
+                target = minBet + (affordableSteps * betStep);
+            }
+            if (target > currentBet)
+            {
+                return SetBet(target);
             }
             return false;
         }
@@ -319,9 +345,11 @@ namespace LuckySpin.SlotMachine.Gameplay
         public bool DecreaseBet()
         {
             if (HasActiveTransaction) return false;
-            if (currentBet - betStep >= minBet)
+            int target = currentBet - betStep;
+            if (target < minBet) target = minBet;
+            if (target < currentBet)
             {
-                return SetBet(currentBet - betStep);
+                return SetBet(target);
             }
             return false;
         }
@@ -329,7 +357,17 @@ namespace LuckySpin.SlotMachine.Gameplay
         public void SetMaxBet()
         {
             if (HasActiveTransaction) return;
-            SetBet(maxBet);
+            int maxAffordable = Mathf.Min(maxBet, currentBalance);
+            if (maxAffordable >= minBet)
+            {
+                int affordableSteps = (maxAffordable - minBet) / betStep;
+                int target = minBet + (affordableSteps * betStep);
+                SetBet(target);
+            }
+            else
+            {
+                SetBet(minBet);
+            }
         }
 
         /// <summary>

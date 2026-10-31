@@ -123,10 +123,32 @@ namespace LuckySpin.SlotMachine.Core
             if (uiManager != null)
             {
                 uiManager.OnSpinClicked += RequestSpin;
-                uiManager.OnIncreaseBetClicked += delegate { if (payoutManager != null) payoutManager.IncreaseBet(); };
-                uiManager.OnDecreaseBetClicked += delegate { if (payoutManager != null) payoutManager.DecreaseBet(); };
-                uiManager.OnMaxBetClicked += delegate { if (payoutManager != null) payoutManager.SetMaxBet(); };
-                uiManager.OnQuickBetSelected += delegate(int b) { if (payoutManager != null) payoutManager.SetBet(b); };
+                uiManager.OnIncreaseBetClicked += delegate {
+                    if (payoutManager != null && payoutManager.IncreaseBet())
+                    {
+                        if (audioManager != null) audioManager.PlayButtonClick();
+                    }
+                };
+                uiManager.OnDecreaseBetClicked += delegate {
+                    if (payoutManager != null && payoutManager.DecreaseBet())
+                    {
+                        if (audioManager != null) audioManager.PlayButtonClick();
+                    }
+                };
+                uiManager.OnMaxBetClicked += delegate {
+                    if (payoutManager != null)
+                    {
+                        payoutManager.SetMaxBet();
+                        if (audioManager != null) audioManager.PlayButtonClick();
+                    }
+                };
+                uiManager.OnQuickBetSelected += delegate(int b) {
+                    if (payoutManager != null)
+                    {
+                        payoutManager.SetBet(b);
+                        if (audioManager != null) audioManager.PlayButtonClick();
+                    }
+                };
             }
 
             if (slotMachine != null)

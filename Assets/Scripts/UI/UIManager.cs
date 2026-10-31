@@ -159,19 +159,36 @@ namespace LuckySpin.SlotMachine.UI
             }
         }
 
+        private static readonly Color PresetNormalColor = new Color(0.18f, 0.14f, 0.28f, 0.95f);
+        private static readonly Color PresetSelectedColor = new Color(0.85f, 0.65f, 0.15f, 1f);
+
+        private int cachedBalance = 1000;
+        private int cachedBet = 10;
+        private bool isSpinningActive = false;
+
         public void UpdateBalance(int newBalance)
         {
+            cachedBalance = newBalance;
             if (balanceText != null)
             {
                 balanceText.text = string.Format("{0:N0} G", newBalance);
+            }
+            if (!isSpinningActive)
+            {
+                RefreshBetControlStates();
             }
         }
 
         public void UpdateBet(int newBet)
         {
+            cachedBet = newBet;
             if (betText != null)
             {
                 betText.text = string.Format("BET {0:N0} G", newBet);
+            }
+            if (!isSpinningActive)
+            {
+                RefreshBetControlStates();
             }
         }
 
@@ -189,16 +206,81 @@ namespace LuckySpin.SlotMachine.UI
 
         public void SetSpinInteractable(bool interactable)
         {
+            isSpinningActive = !interactable;
             if (spinButton != null)
             {
-                spinButton.interactable = interactable;
+                spinButton.interactable = interactable && (cachedBalance >= 10);
             }
-            if (increaseBetButton != null) increaseBetButton.interactable = interactable;
-            if (decreaseBetButton != null) decreaseBetButton.interactable = interactable;
-            if (maxBetButton != null) maxBetButton.interactable = interactable;
-            if (bet10Button != null) bet10Button.interactable = interactable;
-            if (bet50Button != null) bet50Button.interactable = interactable;
-            if (bet100Button != null) bet100Button.interactable = interactable;
+
+            if (!interactable)
+            {
+                // Disable all bet adjustments during active spin
+                if (increaseBetButton != null) increaseBetButton.interactable = false;
+                if (decreaseBetButton != null) decreaseBetButton.interactable = false;
+                if (maxBetButton != null) maxBetButton.interactable = false;
+                if (bet10Button != null) bet10Button.interactable = false;
+                if (bet50Button != null) bet50Button.interactable = false;
+                if (bet100Button != null) bet100Button.interactable = false;
+            }
+            else
+            {
+                RefreshBetControlStates();
+            }
+        }
+
+        private void RefreshBetControlStates()
+        {
+            // Minus button: enabled only if bet can be decreased (> 10)
+            if (decreaseBetButton != null)
+            {
+                decreaseBetButton.interactable = (cachedBet > 10);
+            }
+
+            // Plus button: enabled only if bet < 100 and affordable
+            if (increaseBetButton != null)
+            {
+                increaseBetButton.interactable = (cachedBet < 100 && cachedBet + 10 <= cachedBalance);
+            }
+
+            // Quick presets: enabled if affordable and highlight selected
+            if (bet10Button != null)
+            {
+                bet10Button.interactable = (cachedBalance >= 10);
+                SetButtonVisualHighlight(bet10Button, cachedBet == 10);
+            }
+            if (bet50Button != null)
+            {
+                bet50Button.interactable = (cachedBalance >= 50);
+                SetButtonVisualHighlight(bet50Button, cachedBet == 50);
+            }
+            if (bet100Button != null)
+            {
+                bet100Button.interactable = (cachedBalance >= 100);
+                SetButtonVisualHighlight(bet100Button, cachedBet == 100);
+            }
+
+            // Max button: enabled if current bet is less than max affordable bet
+            if (maxBetButton != null)
+            {
+                int maxAffordable = Mathf.Min(100, cachedBalance);
+                maxBetButton.interactable = (cachedBet < maxAffordable && maxAffordable >= 10);
+            }
+
+            // Spin button: enabled if balance can afford current bet
+            if (spinButton != null && !isSpinningActive)
+            {
+                spinButton.interactable = (cachedBalance >= cachedBet && cachedBet >= 10);
+            }
+        }
+
+        private void SetButtonVisualHighlight(Button btn, bool isSelected)
+        {
+            if (btn == null) return;
+            Image img = btn.targetGraphic as Image;
+            if (img != null)
+            {
+                img.color = isSelected ? PresetSelectedColor : PresetNormalColor;
+            }
         }
 
         /// <summary>
