@@ -294,17 +294,6 @@ namespace LuckySpin.SlotMachine.Gameplay
             }
             clamped = Mathf.Clamp(clamped, minBet, maxBet);
 
-            // Cap bet to available balance if balance allows at least minBet
-            if (clamped > currentBalance && currentBalance >= minBet)
-            {
-                int affordableSteps = (currentBalance - minBet) / betStep;
-                clamped = minBet + (affordableSteps * betStep);
-            }
-            else if (currentBalance < minBet)
-            {
-                clamped = minBet;
-            }
-
             if (clamped != currentBet)
             {
                 currentBet = clamped;
