@@ -26,3 +26,4 @@ Once Unity Editor (2021.3 LTS, 2022.3 LTS, or Unity 6) with WebGL Build Support 
 To play and verify the complete game mechanics, audio, animations, and economy right now in any web browser, open the verified standalone HTML5 implementation located in:
 **`Build/HTML5_Standalone/index.html`**
 *(Or execute `start_html5_server.bat` at the repository root).*
+

@@ -14,3 +14,4 @@ if %ERRORLEVEL% NEQ 0 (
     npx -y serve Build/HTML5_Standalone -p 8080
 )
 pause
+
