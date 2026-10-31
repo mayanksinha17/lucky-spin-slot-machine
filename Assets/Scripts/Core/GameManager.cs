@@ -99,9 +99,17 @@ namespace LuckySpin.SlotMachine.Core
             {
                 payoutManager.OnBalanceChanged += delegate(int bal) {
                     if (uiManager != null) uiManager.UpdateBalance(bal);
+                    if (currentState == GameState.InsufficientFunds && payoutManager.HasSufficientCredits())
+                    {
+                        SetState(GameState.Idle);
+                    }
                 };
                 payoutManager.OnBetChanged += delegate(int bet) {
                     if (uiManager != null) uiManager.UpdateBet(bet);
+                    if (currentState == GameState.InsufficientFunds && payoutManager.HasSufficientCredits())
+                    {
+                        SetState(GameState.Idle);
+                    }
                 };
                 payoutManager.OnInsufficientFunds += delegate {
                     SetState(GameState.InsufficientFunds);
@@ -191,7 +199,37 @@ namespace LuckySpin.SlotMachine.Core
             }
         }
 
-        private void HandleAllReelsStopped()
+        public void InitializeForTesting(
+            SlotMachineController sm,
+            RandomOutcomeGenerator rog,
+            WinningEvaluator we,
+            PayoutManager pm,
+            UIManager ui,
+            AudioManager am,
+            GameHistoryManager hm,
+            SymbolDatabase db,
+            AutoSpinController asc = null,
+            JackpotCelebrationController jcc = null,
+            WinStreakTracker wst = null)
+        {
+            slotMachine = sm;
+            outcomeGenerator = rog;
+            winningEvaluator = we;
+            payoutManager = pm;
+            uiManager = ui;
+            audioManager = am;
+            historyManager = hm;
+            symbolDatabase = db;
+            autoSpinController = asc;
+            jackpotCelebration = jcc;
+            winStreakTracker = wst;
+
+            InitializeSubsystems();
+            SetState(GameState.Idle);
+            UpdateUI();
+        }
+
+        public void HandleAllReelsStopped()
         {
             if (audioManager != null)
             {

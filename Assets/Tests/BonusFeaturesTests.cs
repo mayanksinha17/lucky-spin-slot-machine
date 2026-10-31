@@ -503,3 +503,4 @@ namespace LuckySpin.SlotMachine.Tests
         }
     }
 }
+

@@ -32,6 +32,12 @@ namespace LuckySpin.SlotMachine.Gameplay
         public ReelController[] Reels { get { return reels; } }
         public int ReelCount { get { return reels != null ? reels.Length : 0; } }
 
+        public void SetReels(ReelController[] r)
+        {
+            reels = r;
+            InitializeReelListeners();
+        }
+
         public bool IsAnyReelSpinning
         {
             get
@@ -126,6 +132,31 @@ namespace LuckySpin.SlotMachine.Gameplay
                 {
                     reels[i].StartSpinning();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Immediately stops all reels at their predetermined outcomes for testing and instantaneous settlement.
+        /// </summary>
+        public void StopReelsImmediately(SymbolData[] predeterminedOutcomes)
+        {
+            if (orchestrationRoutine != null) StopCoroutine(orchestrationRoutine);
+            orchestrationRoutine = null;
+
+            if (reels != null && predeterminedOutcomes != null)
+            {
+                for (int i = 0; i < reels.Length; i++)
+                {
+                    if (reels[i] != null && i < predeterminedOutcomes.Length)
+                    {
+                        reels[i].StopImmediately(predeterminedOutcomes[i]);
+                    }
+                }
+            }
+
+            if (OnAllReelsStopped != null)
+            {
+                OnAllReelsStopped();
             }
         }
 

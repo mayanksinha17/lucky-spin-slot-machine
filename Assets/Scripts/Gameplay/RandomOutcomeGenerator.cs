@@ -80,6 +80,12 @@ namespace LuckySpin.SlotMachine.Gameplay
             set { useWeightedProbabilities = value; }
         }
 
+        public IRandomProvider RandomProvider
+        {
+            get { return randomProvider; }
+            set { SetRandomProvider(value); }
+        }
+
         public void SetRandomProvider(IRandomProvider provider)
         {
             randomProvider = provider ?? new UnityRandomProvider();
@@ -99,51 +105,52 @@ namespace LuckySpin.SlotMachine.Gameplay
             SymbolData[] outcome = new SymbolData[3];
             for (int i = 0; i < 3; i++)
             {
-                outcome[i] = GenerateSingleSymbol(activeDb);
+                outcome[i] = useWeightedProbabilities 
+                    ? SelectWeightedSymbol(activeDb) 
+                    : SelectUniformSymbol(activeDb);
             }
+
             return outcome;
         }
 
-        /// <summary>
-        /// Generates a single randomized symbol based on database weights or uniform distribution.
-        /// </summary>
-        public SymbolData GenerateSingleSymbol(SymbolDatabase activeDb)
+        private SymbolData SelectUniformSymbol(SymbolDatabase db)
         {
-            if (activeDb == null || activeDb.Symbols == null || activeDb.Symbols.Length == 0) return null;
+            int index = randomProvider.Range(0, db.Symbols.Length);
+            return db.Symbols[index];
+        }
 
-            if (!useWeightedProbabilities)
-            {
-                int randomIdx = randomProvider.Range(0, activeDb.Symbols.Length);
-                return activeDb.Symbols[randomIdx];
-            }
-
-            // Calculate total weight
+        private SymbolData SelectWeightedSymbol(SymbolDatabase db)
+        {
             int totalWeight = 0;
-            for (int i = 0; i < activeDb.Symbols.Length; i++)
+            for (int i = 0; i < db.Symbols.Length; i++)
             {
-                if (activeDb.Symbols[i] != null)
+                if (db.Symbols[i] != null)
                 {
-                    totalWeight += Mathf.Max(1, activeDb.Symbols[i].Weight);
+                    totalWeight += Mathf.Max(1, db.Symbols[i].Weight);
                 }
             }
 
-            // Roll within total weight
-            int roll = randomProvider.Range(0, totalWeight);
+            if (totalWeight <= 0)
+            {
+                return SelectUniformSymbol(db);
+            }
+
+            int randomWeight = randomProvider.Range(0, totalWeight);
             int accumulated = 0;
 
-            for (int i = 0; i < activeDb.Symbols.Length; i++)
+            for (int i = 0; i < db.Symbols.Length; i++)
             {
-                if (activeDb.Symbols[i] != null)
+                if (db.Symbols[i] != null)
                 {
-                    accumulated += Mathf.Max(1, activeDb.Symbols[i].Weight);
-                    if (roll < accumulated)
+                    accumulated += Mathf.Max(1, db.Symbols[i].Weight);
+                    if (randomWeight < accumulated)
                     {
-                        return activeDb.Symbols[i];
+                        return db.Symbols[i];
                     }
                 }
             }
 
-            return activeDb.Symbols[activeDb.Symbols.Length - 1];
+            return db.Symbols[0];
         }
     }
 }
