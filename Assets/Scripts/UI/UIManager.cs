@@ -31,6 +31,8 @@ namespace LuckySpin.SlotMachine.UI
         [SerializeField] private Button bet10Button;
         [SerializeField] private Button bet50Button;
         [SerializeField] private Button bet100Button;
+        [SerializeField] private Sprite presetNormalSprite;
+        [SerializeField] private Sprite presetSelectedSprite;
 
         [Header("Result Notification Area")]
         [SerializeField] private GameObject resultBannerRoot;
@@ -279,7 +281,15 @@ namespace LuckySpin.SlotMachine.UI
             Image img = btn.targetGraphic as Image;
             if (img != null)
             {
-                img.color = isSelected ? PresetSelectedColor : PresetNormalColor;
+                if (presetSelectedSprite != null && presetNormalSprite != null)
+                {
+                    img.sprite = isSelected ? presetSelectedSprite : presetNormalSprite;
+                    img.color = Color.white;
+                }
+                else
+                {
+                    img.color = isSelected ? PresetSelectedColor : PresetNormalColor;
+                }
             }
         }
 
