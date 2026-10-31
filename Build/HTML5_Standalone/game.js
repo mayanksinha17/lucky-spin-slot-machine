@@ -105,9 +105,24 @@ class PayoutManager {
 class RandomOutcomeGenerator {
     constructor() {
         this.useWeighted = true;
+        this.forcedOutcome = null;
+    }
+
+    setForcedOutcome(outcome) {
+        this.forcedOutcome = outcome;
+    }
+
+    clearForcedOutcome() {
+        this.forcedOutcome = null;
     }
 
     generateOutcome() {
+        if (this.forcedOutcome && this.forcedOutcome.length === 3) {
+            const forced = [...this.forcedOutcome];
+            this.forcedOutcome = null; // Single-shot forced outcome
+            return forced;
+        }
+
         return [
             this.selectSymbol(),
             this.selectSymbol(),
@@ -200,8 +215,21 @@ class ReelController {
         this.isSpinning = true;
     }
 
-    stopAt(targetSymbol, onComplete) {
+    stopAt(targetSymbol, onComplete, immediate = false) {
         this.finalSymbol = targetSymbol;
+
+        if (immediate) {
+            this.slots[1].src = targetSymbol.icon;
+            const prev = SYMBOLS[(SYMBOLS.indexOf(this.finalSymbol) + SYMBOLS.length - 1) % SYMBOLS.length];
+            const next = SYMBOLS[(SYMBOLS.indexOf(this.finalSymbol) + 1) % SYMBOLS.length];
+            this.slots[0].src = prev.icon;
+            this.slots[2].src = next.icon;
+            this.element.style.transform = 'translateY(0px)';
+            this.isSpinning = false;
+            if (onComplete) onComplete();
+            return;
+        }
+
         const totalDuration = 1000; // ms
         const startTime = performance.now();
 
@@ -241,6 +269,10 @@ class ReelController {
         };
 
         this.animationFrame = requestAnimationFrame(animate);
+    }
+
+    getVisibleCenterSymbol() {
+        return this.finalSymbol;
     }
 }
 
@@ -342,6 +374,7 @@ class GameManager {
         this.history = [];
         this.autoSpinRemaining = 0;
         this.autoSpinActive = false;
+        this.isImmediateMode = false;
 
         this.bindUI();
         this.updateUI();
@@ -415,6 +448,14 @@ class GameManager {
         });
     }
 
+    requestDeterministicSpin(outcomes, bet = null) {
+        if (bet !== null) {
+            this.payoutManager.setBet(bet);
+        }
+        this.outcomeGenerator.setForcedOutcome(outcomes);
+        this.requestSpin();
+    }
+
     requestSpin() {
         if (this.state !== 'Idle') return;
 
@@ -444,6 +485,14 @@ class GameManager {
 
         // 5. Trigger Reel Animation with Sequential Stopping
         this.reels.forEach(r => r.spin());
+
+        if (this.isImmediateMode) {
+            this.reels[0].stopAt(this.currentPredeterminedOutcomes[0], null, true);
+            this.reels[1].stopAt(this.currentPredeterminedOutcomes[1], null, true);
+            this.reels[2].stopAt(this.currentPredeterminedOutcomes[2], null, true);
+            this.handleSpinCompleted();
+            return;
+        }
 
         // Staggered stop delays: Reel 1 (1.2s), Reel 2 (1.6s), Reel 3 (2.0s)
         setTimeout(() => {
@@ -514,6 +563,12 @@ class GameManager {
 
         // Auto adjust bet if credits lower than current bet
         this.payoutManager.autoAdjustBetToAffordable();
+
+        if (this.isImmediateMode) {
+            this.state = 'Idle';
+            this.updateUI();
+            return;
+        }
 
         setTimeout(() => {
             this.state = 'Idle';
@@ -639,7 +694,20 @@ class GameManager {
     }
 }
 
-// Instantiate on DOMContentLoaded
+// Responsive Game Auto-Scaler for multi-viewport compatibility
+function resizeGame() {
+    const container = document.getElementById('game-container');
+    if (!container) return;
+    const baseW = 1280;
+    const baseH = 720;
+    const scale = Math.min(window.innerWidth / baseW, window.innerHeight / baseH, 1.0);
+    container.style.transform = `scale(${scale})`;
+    container.style.transformOrigin = 'center center';
+}
+
+window.addEventListener('resize', resizeGame);
 window.addEventListener('DOMContentLoaded', () => {
+    resizeGame();
     window.gameManager = new GameManager();
 });
+

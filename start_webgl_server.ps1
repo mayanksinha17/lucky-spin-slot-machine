@@ -1,6 +1,6 @@
-# PowerShell Launcher for LUCKY SPIN WebGL Local Server
+# PowerShell Launcher for LUCKY SPIN WebGL Directory Server
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  LUCKY SPIN - Ultimate Slot Machine WebGL / HTML5 Server" -ForegroundColor Yellow
+Write-Host "  LUCKY SPIN - WebGL Directory Server" -ForegroundColor Yellow
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Serving Build/WebGL/ at http://localhost:8080/index.html ..." -ForegroundColor Green

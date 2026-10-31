@@ -4,6 +4,7 @@
 [Oo]bj/
 /[Bb]uild/*
 !/[Bb]uild/WebGL/
+!/[Bb]uild/HTML5_Standalone/
 [Bb]uilds/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/

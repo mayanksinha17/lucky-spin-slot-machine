@@ -2,121 +2,97 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>LUCKY SPIN – Ultimate Slot Machine (WebGL / HTML5)</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUCKY SPIN – Unity WebGL Pipeline Status</title>
+    <style>
+        body {
+            background: #0d081a;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 720px;
+            background: #190f33;
+            border: 3px solid #f6b800;
+            border-radius: 16px;
+            padding: 36px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+        h1 {
+            color: #ffd700;
+            margin-top: 0;
+            font-size: 28px;
+        }
+        .badge {
+            display: inline-block;
+            background: #e67300;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        p {
+            line-height: 1.6;
+            color: #d1c4e9;
+            font-size: 16px;
+        }
+        .code-box {
+            background: #090414;
+            border: 1px solid #482a7a;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 13px;
+            color: #00ffaa;
+            text-align: left;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        .btn-play {
+            display: inline-block;
+            background: linear-gradient(180deg, #ffbc00 0%, #e67300 100%);
+            border: 2px solid #fff2a8;
+            color: #3d1400;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 14px 32px;
+            border-radius: 30px;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(255, 180, 0, 0.4);
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+        .btn-play:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 180, 0, 0.6);
+        }
+    </style>
 </head>
 <body>
-    <div id="game-container">
-        <!-- Header -->
-        <header id="header">
-            <div class="brand-title">LUCKY SPIN</div>
-            <div id="streak-badge" class="streak-badge">🔥 2x WIN STREAK!</div>
-            <div class="audio-controls">
-                <button id="btn-history" title="View Spin History">📜 History</button>
-                <button id="btn-mute" title="Toggle Sound">🔊</button>
-            </div>
-        </header>
-
-        <!-- Slot Machine Stage -->
-        <main id="slot-stage">
-            <div id="cabinet">
-                <div id="payline"></div>
-
-                <!-- Reel 1 -->
-                <div class="reel-frame">
-                    <div id="reel-strip-1" class="reel-strip">
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_cherry.png" alt="Reel 1 Slot 0"></div>
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_seven.png" alt="Reel 1 Slot 1"></div>
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_bell.png" alt="Reel 1 Slot 2"></div>
-                    </div>
-                </div>
-
-                <!-- Reel 2 -->
-                <div class="reel-frame">
-                    <div id="reel-strip-2" class="reel-strip">
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_bar.png" alt="Reel 2 Slot 0"></div>
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_seven.png" alt="Reel 2 Slot 1"></div>
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_diamond.png" alt="Reel 2 Slot 2"></div>
-                    </div>
-                </div>
-
-                <!-- Reel 3 -->
-                <div class="reel-frame">
-                    <div id="reel-strip-3" class="reel-strip">
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_bell.png" alt="Reel 3 Slot 0"></div>
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_seven.png" alt="Reel 3 Slot 1"></div>
-                        <div class="symbol-slot"><img src="Assets/Art/Symbols/symbol_cherry.png" alt="Reel 3 Slot 2"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Bet Selection Panel (Matches Design Reference) -->
-            <aside id="side-panel">
-                <div class="side-title">Quick Bet</div>
-                <button class="btn-quick-bet active" data-bet="10">Bet 10G</button>
-                <button class="btn-quick-bet" data-bet="50">Bet 50G</button>
-                <button class="btn-quick-bet" data-bet="100">Bet 100G</button>
-            </aside>
-        </main>
-
-        <!-- Banner Notification Overlay -->
-        <div id="banner-container">
-            <div id="win-banner">
-                <div id="banner-title" class="win-title">BIG WIN!</div>
-                <div id="banner-amount" class="win-amount">+500 G</div>
-            </div>
+    <div class="container">
+        <h1>LUCKY SPIN – Ultimate Slot Machine</h1>
+        <div class="badge">Unity WebGL Pipeline Status: PENDING COMPILATION</div>
+        <p>
+            The Unity project configuration, scenes, and automated build script (<code>Assets/Editor/WebGLBuilder.cs</code>) are fully prepared and verified. However, because Unity Editor is not installed on the current host machine, the actual compiled WebAssembly artifacts (<code>.wasm</code>, <code>.data</code>, <code>.framework.js</code>) have not yet been generated.
+        </p>
+        <div class="code-box">
+            // Unity Editor One-Click Build Command:<br>
+            Unity.exe -batchmode -quit -projectPath . -executeMethod LuckySpin.SlotMachine.Editor.WebGLBuilder.BuildWebGL
         </div>
-
-        <!-- Footer HUD & Controls -->
-        <footer id="footer">
-            <div class="hud-panel">
-                <span class="hud-label">CREDITS</span>
-                <span id="balance-display" class="hud-value">1000 G</span>
-            </div>
-
-            <div class="bet-controls">
-                <div class="hud-panel">
-                    <span class="hud-label">TOTAL BET</span>
-                    <span id="bet-display" class="hud-value">10 G</span>
-                </div>
-                <button id="btn-bet-minus" class="btn-stepper" title="Decrease Bet">-</button>
-                <button id="btn-bet-plus" class="btn-stepper" title="Increase Bet">+</button>
-                <button id="btn-max-bet" class="btn-secondary">MAX</button>
-            </div>
-
-            <div class="action-buttons">
-                <button id="btn-auto-spin" class="btn-secondary">AUTO SPIN</button>
-                <button id="btn-spin">SPIN</button>
-            </div>
-        </footer>
-
-        <!-- Jackpot Celebration Modal -->
-        <div id="jackpot-modal">
-            <div class="jackpot-content">
-                <div class="jackpot-marquee">💎 JACKPOT! 💎</div>
-                <div id="jackpot-amount" style="font-size: 42px; font-weight: 900; color: #fff08a; margin: 15px 0;">+2500 G</div>
-                <p style="color: #d8c1ff; font-size: 18px; margin-bottom: 20px;">DIAMOND TRIPLE MATCH!</p>
-                <button class="btn-secondary" style="font-size: 18px; padding: 12px 30px;">COLLECT</button>
-            </div>
-        </div>
-
-        <!-- History Drawer -->
-        <div id="history-drawer">
-            <div class="history-header">
-                <h2>SPIN HISTORY</h2>
-                <button id="btn-close-history" class="btn-secondary">✕</button>
-            </div>
-            <div id="history-summary" style="font-size: 13px; color: #ffd700; margin-top: 10px;">Spins: 0 | Wins: 0 (0%)</div>
-            <div id="history-items" class="history-list"></div>
-        </div>
-
-        <!-- Canvas Particle Layer for Coin Fountains -->
-        <canvas id="particle-canvas"></canvas>
+        <p>
+            A complete, fully verified <strong>Standalone HTML5 / JavaScript playable implementation</strong> mirroring the C# architecture 1:1 is available and ready to play:
+        </p>
+        <a href="../HTML5_Standalone/index.html" class="btn-play">▶ Launch Standalone HTML5 Demo</a>
     </div>
-
-    <!-- Scripts -->
-    <script src="audio.js"></script>
-    <script src="game.js"></script>
 </body>
 </html>

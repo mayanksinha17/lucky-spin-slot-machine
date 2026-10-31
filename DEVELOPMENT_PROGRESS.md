@@ -23,8 +23,8 @@
 | **Virtual Credit System** | Centralized Virtual Credit, Wallet & Transaction Ledger | **Completed** | Centralized balance ledger, atomic bet deduction, payout calculation, duplicate prevention, audit trail, 35/35 tests passing |
 | **Bonus Features System** | Modular Bonus Features (7 Priorities) | **Completed** | Auto-spin, Jackpot animation, Wild symbol, Win streaks, History stats, Audio/Particles polish, 56/56 tests passing |
 | **Phase 8** | Complete End-to-End Integration Testing & Stress Verification | **Completed** | 68/68 tests passing (100%); 100 & 500-spin simulations verified; strict financial invariant holds |
-| **Phase 9** | WebGL Build Pipeline & Local Server Delivery | **Completed** | Full WebGL build generated in Build/WebGL/; verified in browser with 100% test pass rate; server scripts ready |
-| **Phase 10**| Git History, README & Production Documentation | **Next Up** | Ready for approval |
+| **Phase 9** | WebGL Pipeline & Standalone HTML5 Playable Delivery | **Partially Completed** | Unity WebGL pipeline configured (compilation pending Unity Editor); Standalone HTML5 demo completed & verified (35/35 browser tests pass, 5 viewports) |
+| **Phase 10**| Git History, README & Production Documentation | Pending | Awaiting Phase 9 approval |
 
 ---
 
@@ -242,86 +242,108 @@ GRAND TOTAL: 68 Tests | Passed: 68 | Failed: 0 (100% Pass Rate)
 
 ---
 
-### Phase 9: WebGL Build Pipeline & Local Server Delivery Summary
+### Phase 9: WebGL Pipeline & Standalone HTML5 Playable Delivery (Clarified Status)
 
-#### 1. Environment & Toolchain Inspection (Documented Limitation)
-* **Local Unity Editor Binary**: System survey confirmed neither `Unity.exe` nor Unity Hub is installed on the local system (`C:\`). Consequently, direct CLI invocation of Unity Editor was not possible on this environment.
-* **Dual-Delivery Strategy**:
-  1. **Production Unity Project Configuration**: The entire Unity project (`ProjectSettings.asset`, `EditorBuildSettings.asset`, `MainGame.unity`, all C# scripts, prefabs, and assets) is 100% configured for standard Unity WebGL compilation. An automated build script ([`Assets/Editor/WebGLBuilder.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Editor/WebGLBuilder.cs)) is included for one-click compilation in the Unity Editor (`Build -> Build WebGL (Release)`).
-  2. **Production WebGL / HTML5 Playable Build**: A self-contained, playable WebGL/HTML5 build matching the C# architecture 1:1 was generated directly inside [`Build/WebGL/`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/WebGL/), verified via headless Chrome, and served locally.
+#### 1. Deliverable Separation & Status Clarification
+To ensure absolute technical transparency and prevent any ambiguity between environments:
+* **Deliverable A: Unity WebGL Build Pipeline (Status: PARTIALLY COMPLETED / PENDING UNITY EDITOR)**:
+  * Full Unity project settings, scene indexing, and C# compilation pipeline configured.
+  * Automated Editor build script ([`Assets/Editor/WebGLBuilder.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Editor/WebGLBuilder.cs)) prepared for one-click compilation.
+  * **Build Provenance Audit**: `Build/WebGL/` currently does **not** contain compiled Unity WebGL artifacts (`.wasm`, `.data`, `.framework.js`, `UnityLoader.js`). An actual Unity WebGL compilation has **not** yet been executed because the host operating system lacks a local installation of the Unity Editor and WebGL Build Support module.
+* **Deliverable B: Standalone HTML5/JavaScript Playable Demonstration (Status: COMPLETED & VERIFIED)**:
+  * Located independently in [`Build/HTML5_Standalone/`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/HTML5_Standalone/).
+  * Implements the exact C# OOP slot machine architecture in browser-native JavaScript and HTML5 Canvas with real Web Audio API synthesis and responsive CSS.
+  * Reuses the actual provided design assets (`bg_dots.jpg`, `ui_panel.png`, `reference_cabinet.png`, `button_*.png`, and symbol textures).
+  * 100% verified via automated browser test suite (35/35 passing) across 5 distinct screen viewports.
 
 ---
 
-#### 2. Unity WebGL Platform Configuration
+#### 2. Unity WebGL Platform Configuration Audit
 * **Project Settings** ([`ProjectSettings/ProjectSettings.asset`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/ProjectSettings/ProjectSettings.asset)):
-  * Target Resolution: $1920 \times 1080\text{ px}$ (`defaultScreenWidthWeb`, `defaultScreenHeightWeb`).
+  * Target Resolution: $1920 \times 1080\text{ px}$ (`defaultScreenWidthWeb: 1920`, `defaultScreenHeightWeb: 1080`).
   * WebGL Template: `APPLICATION:Default`.
-  * Initial WebGL Memory: $256\text{ MB}$ heap allocation.
-  * WebGL Compression: `0` (Disabled) to ensure seamless out-of-the-box hosting on any basic HTTP server (Python, Node, Nginx, Apache) without requiring special `Content-Encoding: gzip/br` headers.
-  * Run in Background: `true` to maintain audio/timer sync when switching browser tabs.
+  * Initial WebGL Memory: $256\text{ MB}$ heap allocation (`webGLMemorySize: 256`).
+  * WebGL Compression: `0` (Disabled) to enable direct hosting on any standard HTTP server without requiring custom `Content-Encoding: gzip/br` headers.
+  * Run in Background: `true` (`runInBackground: 1`).
 * **Included Scenes** ([`ProjectSettings/EditorBuildSettings.asset`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/ProjectSettings/EditorBuildSettings.asset)):
   * `Assets/Scenes/MainGame.unity` (Enabled, index 0).
-* **Automated Editor Builder** ([`Assets/Editor/WebGLBuilder.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Editor/WebGLBuilder.cs)):
-  * Configures `BuildTarget.WebGL`, validates scene list, and outputs directly to `Build/WebGL/`.
+* **Automated Editor Build Script** ([`Assets/Editor/WebGLBuilder.cs`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Assets/Editor/WebGLBuilder.cs)):
+  * Namespaces: `UnityEditor`, `UnityEditor.Build.Reporting`, `UnityEngine`.
+  * Target: `BuildTarget.WebGL`, `BuildTargetGroup.WebGL`.
+  * Output Destination: `Build/WebGL`.
+  * Status: Syntax verified; Unity Editor runtime execution remains **pending** until opened in Unity Editor.
 
 ---
 
-#### 3. WebGL Build Manifest ([`Build/WebGL/`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/WebGL/))
-
-| File / Directory | Purpose & Contents |
-|---|---|
-| [`index.html`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/WebGL/index.html) | Responsive 1920x1080 canvas container, arcade bezel, HUD, reels, controls, particle canvas, jackpot modal, and history drawer. |
-| [`style.css`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/WebGL/style.css) | Dark theme with gold/purple accents, glowing paylines, responsive scaling, and mechanical button states. |
-| [`game.js`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/WebGL/game.js) | Full OOP slot machine engine mirroring C# classes (`PayoutManager`, `RandomOutcomeGenerator`, `WinningEvaluator`, `ReelController`, `AutoSpinController`, `WinStreakTracker`, `GameHistoryManager`, `GameManager`). |
-| [`audio.js`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/WebGL/audio.js) | Multi-channel Web Audio API synthesizer generating real-time PCM audio for all 7 sound effects with pitch-shifting reel stops. |
-| [`test_runner.html`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/WebGL/test_runner.html) | In-browser automated verification test harness. |
-| `Assets/Art/Backgrounds/` | High-res background texture (`bg_dots.jpg`). |
-| `Assets/Art/Symbols/` | High-res symbol sprites (`symbol_cherry.png`, `bell`, `bar`, `seven`, `diamond`, `wild`). |
-| `Assets/Art/UI/` | UI textures (`button_play.png`, `button_close.png`, `ui_panel.png`, `reference_cabinet.png`). |
-| `Assets/Audio/SFX/` | High-fidelity 16-bit 44.1kHz WAV clips for all sound effects. |
-
----
-
-#### 4. In-Browser Automated Test Results (Google Chrome v156 Headless)
+#### 3. Standalone HTML5 In-Browser Automated Test Results (Google Chrome Headless)
+The comprehensive test suite ([`Build/HTML5_Standalone/comprehensive_test_suite.html`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/Build/HTML5_Standalone/comprehensive_test_suite.html)) was executed via headless Google Chrome:
 
 ```
-[PASS] Initial State: Idle === 'Idle'
-[PASS] Initial Balance: 1000 === 1000 G
-[PASS] Initial Bet: 10 === 10 G
-[PASS] Increase Bet: Current Bet = 20 G
-[PASS] Quick Bet 50G: Current Bet = 50 G
-[PASS] Dispatching Spin with Bet: 50 G...
-[PASS] State changed to Spinning: true
-[PASS] Atomic Debit: Balance = 950 G (1000 - 50 = 950)
-[PASS] Spin Button Disabled: true
-[PASS] State after Spin Settlement: Evaluating
-[PASS] Evaluation Result valid: Win=false
-[PASS] Spin History Recorded: Count = 1
-[PASS] Financial Invariant Valid: Balance = 950 G
-[PASS] Audio Mute Toggle: IsMuted = true
-[PASS] Audio Unmuted: IsMuted = false
-[PASS] Low Credit Auto-Spin Blocked: HasCredits = false
-[PASS] === ALL BROWSER IN-ENGINE TESTS COMPLETED: ALL PASSED ===
+============================================================
+=== HTML5 STANDALONE COMPREHENSIVE TEST SUITE (35 TESTS) ===
+============================================================
+✓ [PASS] T01_InitialState_Idle (State is Idle)
+✓ [PASS] T02_InitialBalance_1000 (Balance is 1000)
+✓ [PASS] T03_InitialBet_10 (Bet is 10)
+✓ [PASS] T04_Win_Reel1StoppedOnCherry
+✓ [PASS] T05_Win_Reel2StoppedOnCherry
+✓ [PASS] T06_Win_Reel3StoppedOnCherry
+✓ [PASS] T07_Win_ResultMarkedAsWin
+✓ [PASS] T08_Win_CherryMultiplierIs2x
+✓ [PASS] T09_Win_DebitAndPayoutArithmetic (Expected 1020, got 1020)
+✓ [PASS] T10_Win_HistoryRecordedWin
+✓ [PASS] T11_Loss_Reel1StoppedOnCherry
+✓ [PASS] T12_Loss_Reel2StoppedOnBell
+✓ [PASS] T13_Loss_Reel3StoppedOnBar
+✓ [PASS] T14_Loss_ResultMarkedAsLoss
+✓ [PASS] T15_Loss_MultiplierIsZero
+✓ [PASS] T16_Loss_DebitWithoutPayout (Expected 970, got 970)
+✓ [PASS] T17_Loss_HistoryRecordedLoss
+✓ [PASS] T18_Wild_SubstitutionWins
+✓ [PASS] T19_Wild_MarkedAsWildAssisted
+✓ [PASS] T20_Wild_SevenMultiplier25xAwarded
+✓ [PASS] T21_Wild_PayoutSettledAccurately
+✓ [PASS] T22_Streak_FirstWinSetsStreak1
+✓ [PASS] T23_Streak_SecondWinSetsStreak2
+✓ [PASS] T24_Streak_ThirdWinSetsStreak3
+✓ [PASS] T25_Streak_LossResetsStreakToZero
+✓ [PASS] T26_Jackpot_DiamondTripleWins
+✓ [PASS] T27_Jackpot_100xMultiplier
+✓ [PASS] T28_Jackpot_ModalDisplayed
+✓ [PASS] T29_InsufficientCredits_BalanceIntact
+✓ [PASS] T30_InsufficientCredits_StateTransition
+✓ [PASS] T31_AutoSpin_StartedActive
+✓ [PASS] T32_AutoSpin_CancelledCleanly
+✓ [PASS] T33_Audio_MutedProperly
+✓ [PASS] T34_Audio_UnmutedProperly
+✓ [PASS] T35_FinancialInvariant_StrictBalanceConservation (Starting 1000 - Bets 130 + Wins 1345 == Current 2215)
+============================================================
+TOTAL: 35 | PASSED: 35 | FAILED: 0 (100% Pass Rate)
+============================================================
 ```
 
-* **Visual Render Validation**: Confirmed via captured headless browser screenshots (`webgl_initial_render.png` [151 KB] and `webgl_test_execution.png` [184 KB]).
+#### 4. Browser Console & Network Audit
+* **Console Errors**: 0 uncaught errors, 0 runtime exceptions.
+* **Network Requests**: 0 failed requests (all textures, sprites, audio `.wav` files returned HTTP 200).
+
+#### 5. Multi-Viewport Responsive Scaling Verification
+Verified via browser rendering and full screen captures across 5 form factors:
+* **Desktop Full HD ($1920 \times 1080\text{ px}$)**: `viewport_desktop_1920x1080.png` (821 KB)
+* **Standard Laptop ($1366 \times 768\text{ px}$)**: `viewport_laptop_1366x768.png` (412 KB)
+* **Tablet Portrait ($768 \times 1024\text{ px}$)**: `viewport_tablet_768x1024.png` (376 KB)
+* **Mobile Portrait ($375 \times 667\text{ px}$)**: `viewport_mobile_375x667.png` (169 KB)
+* **Mobile Landscape ($812 \times 375\text{ px}$)**: `viewport_mobile_812x375.png` (235 KB)
 
 ---
 
-#### 5. Local HTTP Server Instructions
-Two one-click launch scripts are provided at the project root:
-* **Batch Launcher**: Double-click [`start_webgl_server.bat`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/start_webgl_server.bat)
-* **PowerShell Launcher**: Run [`start_webgl_server.ps1`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/start_webgl_server.ps1)
-* **Manual Command**:
-  ```bash
-  python -m http.server 8080 --directory Build/WebGL
-  ```
-* Open in browser: `http://localhost:8080/index.html`
+#### 6. Local Server Instructions
+* **Standalone HTML5 Playable Demo**:
+  * Double-click [`start_html5_server.bat`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/start_html5_server.bat) or run [`start_html5_server.ps1`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/start_html5_server.ps1).
+  * URL: `http://localhost:8080/index.html`
+* **Unity WebGL Target Directory Server**:
+  * Double-click [`start_webgl_server.bat`](file:///c:/Users/ASUS/Desktop/Underpin%20service%20new/start_webgl_server.bat) to view the Unity compilation status and direct link.
 
 ---
 
-### Next Phase: Phase 10 (Git History, README & Production Documentation)
-Objectives for Phase 10:
-1. Finalize complete, production-grade `README.md` covering gameplay rules, paytable, architecture diagram, controls, and test reproduction commands.
-2. Verify linear, atomic Git commit history across all 10 project milestones.
-3. Prepare final package and submission report.
+### Phase 10: Git History, README & Production Documentation (Pending Approval)
+* Status: **PENDING REVIEW & APPROVAL OF CLARIFIED PHASE 9 REPORT**.
